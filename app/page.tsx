@@ -108,6 +108,7 @@ const badges: { label: string; icon: ReactNode }[] = [
 export default function Home() {
   return (
     <div
+      data-id="Home"
       className={assistant.className}
       dir="rtl"
       style={{
@@ -117,17 +118,17 @@ export default function Home() {
         padding: "36px 28px 80px",
       }}
     >
-      <div style={{ maxWidth: 1280, margin: "0 auto" }}>
+      <div data-id="page-container" style={{ maxWidth: 1280, margin: "0 auto" }}>
        <SizeProvider>
         {/* ===== TOP PRODUCT SECTION ===== */}
-        <div style={{ display: "flex", gap: 36, alignItems: "flex-start", flexWrap: "wrap" }}>
+        <div data-id="top-product-section" style={{ display: "flex", gap: 36, alignItems: "flex-start", flexWrap: "wrap" }}>
           {/* Gallery (right in RTL) */}
-          <div style={{ flex: "1 1 380px", maxWidth: 400, order: 1 }}>
+          <div data-id="gallery-column" style={{ flex: "1 1 380px", maxWidth: 400, order: 1 }}>
             <ProductGallery images={galleryImages} alt={product.title} />
           </div>
 
           {/* Config (center) */}
-          <div style={{ flex: "1 1 380px", minWidth: 320, order: 2 }}>
+          <div data-id="config-column" style={{ flex: "1 1 380px", minWidth: 320, order: 2 }}>
             <BuyPanel
               options={product.options}
               buyLabel={product.buyLabel}
@@ -137,6 +138,7 @@ export default function Home() {
 
           {/* Trust column (left) */}
           <div
+            data-id="trust-column"
             style={{
               flex: "0 1 240px",
               minWidth: 220,
@@ -145,10 +147,11 @@ export default function Home() {
               paddingRight: 24,
             }}
           >
-            <h3 style={{ margin: "0 0 12px", fontSize: 17, fontWeight: 700, color: ACCENT }}>
+            <h3 data-id="trust-title" style={{ margin: "0 0 12px", fontSize: 17, fontWeight: 700, color: ACCENT }}>
               {product.trustTitle}
             </h3>
             <ul
+              data-id="trust-points-list"
               style={{
                 listStyle: "none",
                 margin: "0 0 22px",
@@ -161,18 +164,20 @@ export default function Home() {
               {product.trustPoints.map((pt, i) => (
                 <li
                   key={i}
+                  data-id={`trust-point-${i}`}
                   style={{ fontSize: 14, color: "#4a4a4a", display: "flex", gap: 6, alignItems: "flex-start" }}
                 >
-                  <span style={{ color: ACCENT, fontSize: 11, lineHeight: 1.5 }}>◀</span>
-                  <span>{pt}</span>
+                  <span data-id={`trust-point-bullet-${i}`} style={{ color: ACCENT, fontSize: 11, lineHeight: 1.5 }}>◀</span>
+                  <span data-id={`trust-point-text-${i}`}>{pt}</span>
                 </li>
               ))}
             </ul>
 
-            <div style={{ display: "flex", gap: 8, marginBottom: 18 }}>
+            <div data-id="badges-row" style={{ display: "flex", gap: 8, marginBottom: 18 }}>
               {badges.map((b, i) => (
                 <div
                   key={i}
+                  data-id={`badge-${i}`}
                   style={{
                     flex: 1,
                     border: "1px solid #e6e6e6",
@@ -185,13 +190,14 @@ export default function Home() {
                     gap: 8,
                   }}
                 >
-                  <span style={{ color: "#9a9a9a" }}>{b.icon}</span>
-                  <span style={{ fontSize: 11, color: "#666", lineHeight: 1.25 }}>{b.label}</span>
+                  <span data-id={`badge-icon-${i}`} style={{ color: "#9a9a9a" }}>{b.icon}</span>
+                  <span data-id={`badge-label-${i}`} style={{ fontSize: 11, color: "#666", lineHeight: 1.25 }}>{b.label}</span>
                 </div>
               ))}
             </div>
 
             <a
+              data-id="whatsapp-ask-link"
               href={WHATSAPP_URL}
               target="_blank"
               rel="noopener noreferrer"
@@ -205,6 +211,7 @@ export default function Home() {
               }}
             >
               <span
+                data-id="whatsapp-icon"
                 style={{
                   width: 22,
                   height: 22,
@@ -224,8 +231,9 @@ export default function Home() {
         </div>
 
         {/* ===== DESCRIPTION SECTION ===== */}
-        <div style={{ marginTop: 64 }}>
+        <div data-id="description-section" style={{ marginTop: 64 }}>
           <h2
+            data-id="description-title"
             style={{
               margin: 0,
               fontSize: 25,
@@ -239,6 +247,7 @@ export default function Home() {
           >
             {product.descTitle}
             <span
+              data-id="description-title-underline"
               style={{
                 position: "absolute",
                 bottom: -1,
@@ -250,8 +259,9 @@ export default function Home() {
             />
           </h2>
 
-          <div style={{ display: "flex", gap: 48, alignItems: "flex-start", flexWrap: "wrap", marginTop: 24 }}>
+          <div data-id="description-body-row" style={{ display: "flex", gap: 48, alignItems: "flex-start", flexWrap: "wrap", marginTop: 24 }}>
             <div
+              data-id="description-text-column"
               style={{
                 flex: "1 1 540px",
                 minWidth: 320,
@@ -262,7 +272,7 @@ export default function Home() {
               }}
             >
               {product.descParas.map((para, i) => (
-                <p key={i} style={{ margin: "0 0 18px", whiteSpace: "pre-line" }}>
+                <p key={i} data-id={`desc-para-${i}`} style={{ margin: "0 0 18px", whiteSpace: "pre-line" }}>
                   {para}
                 </p>
               ))}
@@ -270,9 +280,10 @@ export default function Home() {
             </div>
 
             {/* Interactive 3D shed + garden (CAD embed) */}
-            <div style={{ flex: "0 1 450px", minWidth: 300 }}>
+            <div data-id="product-3d-column" style={{ flex: "0 1 450px", minWidth: 300 }}>
               <Product3D />
               <a
+                data-id="phone-link"
                 href={TEL_URL}
                 dir="ltr"
                 style={{

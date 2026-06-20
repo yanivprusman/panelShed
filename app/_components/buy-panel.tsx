@@ -41,6 +41,7 @@ const inputStyle: CSSProperties = {
 function Chevron() {
   return (
     <span
+      data-id="select-chevron"
       style={{
         position: "absolute",
         left: 9,
@@ -146,6 +147,7 @@ export default function BuyPanel({
   return (
     <>
       <h1
+        data-id="buy-panel-title"
         style={{
           margin: "0 0 22px",
           fontSize: 23,
@@ -158,12 +160,12 @@ export default function BuyPanel({
       </h1>
 
       {/* Size + add-on dropdowns — drive the live total */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px 22px" }}>
-        <div>
-          <label style={{ display: "block", fontSize: 14, color: "#555", marginBottom: 5 }}>
+      <div data-id="config-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px 22px" }}>
+        <div data-id="size-field">
+          <label data-id="size-label" style={{ display: "block", fontSize: 14, color: "#555", marginBottom: 5 }}>
             גודל:
           </label>
-          <div style={{ position: "relative" }}>
+          <div data-id="size-select-wrap" style={{ position: "relative" }}>
             <select
               data-id="select-size"
               style={selectStyle}
@@ -171,7 +173,7 @@ export default function BuyPanel({
               onChange={(e) => setSizeIndex(Number(e.target.value))}
             >
               {SIZES.map((s, j) => (
-                <option key={j} value={j}>
+                <option key={j} data-id={`size-option-${j}`} value={j}>
                   {s.label} מטר — {ils(s.price)}
                 </option>
               ))}
@@ -181,18 +183,19 @@ export default function BuyPanel({
         </div>
 
         {options.map((g, i) => (
-          <div key={i}>
-            <label style={{ display: "block", fontSize: 14, color: "#555", marginBottom: 5 }}>
+          <div key={i} data-id={`option-field-${i}`}>
+            <label data-id={`option-label-${i}`} style={{ display: "block", fontSize: 14, color: "#555", marginBottom: 5 }}>
               {g.label}
             </label>
-            <div style={{ position: "relative" }}>
+            <div data-id={`option-select-wrap-${i}`} style={{ position: "relative" }}>
               <select
+                data-id={`option-select-${i}`}
                 style={selectStyle}
                 value={sel[i]}
                 onChange={(e) => setChoice(i, Number(e.target.value))}
               >
                 {g.choices.map((c, j) => (
-                  <option key={j} value={j}>
+                  <option key={j} data-id={`option-${i}-choice-${j}`} value={j}>
                     {c.price != null ? `${c.label} — ${ils(c.price)}` : c.label}
                   </option>
                 ))}
@@ -205,6 +208,7 @@ export default function BuyPanel({
 
       {/* Buy + live price */}
       <div
+        data-id="buy-row"
         style={{
           display: "flex",
           alignItems: "center",
@@ -230,7 +234,7 @@ export default function BuyPanel({
         >
           {buyLabel}
         </button>
-        <div style={{ textAlign: "left" }}>
+        <div data-id="price-wrap" style={{ textAlign: "left" }}>
           <div
             data-id="total-price"
             style={{ fontSize: 26, fontWeight: 700, color: "#2f2f2f" }}
@@ -241,11 +245,12 @@ export default function BuyPanel({
         </div>
       </div>
 
-      <p style={{ margin: "22px 0 0", fontSize: 14, color: "#555" }}>{delivery}</p>
+      <p data-id="delivery-note" style={{ margin: "22px 0 0", fontSize: 14, color: "#555" }}>{delivery}</p>
 
       {/* Order-request modal */}
       {open && (
         <div
+          data-id="order-modal-overlay"
           role="dialog"
           aria-modal="true"
           aria-label={title}
@@ -262,6 +267,7 @@ export default function BuyPanel({
           }}
         >
           <div
+            data-id="order-modal-box"
             onClick={(e) => e.stopPropagation()}
             style={{
               width: "100%",
@@ -275,8 +281,9 @@ export default function BuyPanel({
             }}
           >
             {orderId ? (
-              <div style={{ textAlign: "center" }}>
+              <div data-id="order-success" style={{ textAlign: "center" }}>
                 <div
+                  data-id="order-success-icon"
                   style={{
                     width: 54,
                     height: 54,
@@ -292,16 +299,17 @@ export default function BuyPanel({
                 >
                   ✓
                 </div>
-                <h3 style={{ margin: "0 0 8px", fontSize: 20, fontWeight: 700, color: "#2f2f2f" }}>
+                <h3 data-id="order-success-title" style={{ margin: "0 0 8px", fontSize: 20, fontWeight: 700, color: "#2f2f2f" }}>
                   הבקשה התקבלה!
                 </h3>
-                <p style={{ margin: "0 0 6px", fontSize: 14, color: "#555" }}>
+                <p data-id="order-success-text" style={{ margin: "0 0 6px", fontSize: 14, color: "#555" }}>
                   תודה, נחזור אליכם בהקדם לאישור ההזמנה ותיאום אספקה.
                 </p>
-                <p style={{ margin: "0 0 18px", fontSize: 12, color: "#999" }} dir="ltr">
+                <p data-id="order-success-id" style={{ margin: "0 0 18px", fontSize: 12, color: "#999" }} dir="ltr">
                   מספר בקשה: {orderId}
                 </p>
                 <button
+                  data-id="order-success-close"
                   type="button"
                   onClick={closeModal}
                   style={{
@@ -320,10 +328,11 @@ export default function BuyPanel({
               </div>
             ) : (
               <>
-                <h3 style={{ margin: "0 0 12px", fontSize: 19, fontWeight: 700, color: ACCENT }}>
+                <h3 data-id="order-form-title" style={{ margin: "0 0 12px", fontSize: 19, fontWeight: 700, color: ACCENT }}>
                   {title}
                 </h3>
                 <div
+                  data-id="order-summary"
                   style={{
                     borderBottom: "1px solid #eee",
                     paddingBottom: 12,
@@ -332,20 +341,21 @@ export default function BuyPanel({
                     color: "#555",
                   }}
                 >
-                  <div style={{ display: "flex", justifyContent: "space-between" }}>
-                    <span>גודל {size.label} מטר</span>
-                    <span dir="ltr">{ils(base)}</span>
+                  <div data-id="summary-row-size" style={{ display: "flex", justifyContent: "space-between" }}>
+                    <span data-id="summary-size-label">גודל {size.label} מטר</span>
+                    <span data-id="summary-size-price" dir="ltr">{ils(base)}</span>
                   </div>
                   {chosen.map(
                     (c, i) =>
                       c.price != null && (
-                        <div key={i} style={{ display: "flex", justifyContent: "space-between" }}>
-                          <span>{c.label}</span>
-                          <span dir="ltr">{ils(c.price)}</span>
+                        <div key={i} data-id={`summary-row-${i}`} style={{ display: "flex", justifyContent: "space-between" }}>
+                          <span data-id={`summary-choice-label-${i}`}>{c.label}</span>
+                          <span data-id={`summary-choice-price-${i}`} dir="ltr">{ils(c.price)}</span>
                         </div>
                       ),
                   )}
                   <div
+                    data-id="summary-total-row"
                     style={{
                       display: "flex",
                       justifyContent: "space-between",
@@ -354,12 +364,12 @@ export default function BuyPanel({
                       color: "#2f2f2f",
                     }}
                   >
-                    <span>סה&quot;כ</span>
-                    <span dir="ltr">{ils(newTotal)}</span>
+                    <span data-id="summary-total-label">סה&quot;כ</span>
+                    <span data-id="summary-total-price" dir="ltr">{ils(newTotal)}</span>
                   </div>
                 </div>
 
-                <form onSubmit={submitOrder}>
+                <form data-id="order-form" onSubmit={submitOrder}>
                   <input
                     data-id="order-name"
                     value={name}
@@ -376,6 +386,7 @@ export default function BuyPanel({
                     style={inputStyle}
                   />
                   <textarea
+                    data-id="order-notes"
                     value={notes}
                     onChange={(e) => setNotes(e.target.value)}
                     placeholder="הערות (אזור, גישה למשאית, מועד מועדף…)"
@@ -383,12 +394,12 @@ export default function BuyPanel({
                     style={{ ...inputStyle, resize: "vertical" }}
                   />
                   {error && (
-                    <p style={{ color: "#c0392b", fontSize: 13, margin: "0 0 10px" }}>{error}</p>
+                    <p data-id="order-error" style={{ color: "#c0392b", fontSize: 13, margin: "0 0 10px" }}>{error}</p>
                   )}
-                  <p style={{ fontSize: 12, color: "#999", margin: "0 0 14px" }}>
+                  <p data-id="order-disclaimer" style={{ fontSize: 12, color: "#999", margin: "0 0 14px" }}>
                     זו בקשת הזמנה ואינה חיוב. לא נשמרים פרטי אשראי — נתאם איתכם תשלום ישירות.
                   </p>
-                  <div style={{ display: "flex", gap: 10 }}>
+                  <div data-id="order-actions" style={{ display: "flex", gap: 10 }}>
                     <button
                       type="submit"
                       data-id="order-submit"
@@ -409,6 +420,7 @@ export default function BuyPanel({
                       {submitting ? "שולח…" : "שליחת בקשה"}
                     </button>
                     <button
+                      data-id="order-cancel"
                       type="button"
                       onClick={closeModal}
                       style={{

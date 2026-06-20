@@ -20,16 +20,18 @@ export default function Product3D() {
   const plannerUrl = `${CAD_BASE}/?dcode=panel-shed&width=${s.widthCm}&length=${s.depthCm}&height=220`;
 
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+    <div data-id="Product3D" style={{ display: "flex", alignItems: "center", gap: 12 }}>
       {/* 3D frame — first child renders on the RIGHT in RTL */}
-      <div style={{ flex: "1 1 auto", position: "relative", background: "#e8eef0", borderRadius: 2, overflow: "hidden" }}>
+      <div data-id="product-3d-frame" style={{ flex: "1 1 auto", position: "relative", background: "#e8eef0", borderRadius: 2, overflow: "hidden" }}>
       <iframe
+        data-id="product-3d-iframe"
         src={src}
         title="תצוגת תלת-ממד של המחסן בגינה"
         allow="fullscreen"
         style={{ display: "block", width: "100%", height: 430, border: 0 }}
       />
       <span
+        data-id="product-3d-badge"
         style={{
           position: "absolute",
           top: 10,
@@ -46,6 +48,7 @@ export default function Product3D() {
         פאנל-שד
       </span>
       <span
+        data-id="product-3d-hint"
         style={{
           position: "absolute",
           bottom: 10,

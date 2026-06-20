@@ -26,6 +26,7 @@ export default function ImagePlaceholder({
 }: ImagePlaceholderProps) {
   return (
     <div
+      data-id="ImagePlaceholder"
       style={{
         position: "relative",
         overflow: "hidden",
@@ -43,6 +44,7 @@ export default function ImagePlaceholder({
     >
       {src ? (
         <img
+          data-id="image-placeholder-img"
           src={src}
           alt={alt}
           style={{
@@ -73,6 +75,7 @@ export default function ImagePlaceholder({
           </svg>
           {caption ? (
             <span
+              data-id="image-placeholder-caption"
               style={{
                 maxWidth: "90%",
                 padding: "0 8px",

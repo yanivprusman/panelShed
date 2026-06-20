@@ -15,12 +15,12 @@ export default function ProductDims() {
     `עומק: ${s.depthCm} ס"מ`,
   ];
   return (
-    <div style={{ marginTop: 22 }}>
-      <div style={{ fontWeight: 700, textDecoration: "underline", marginBottom: 4 }}>
+    <div data-id="ProductDims" style={{ marginTop: 22 }}>
+      <div data-id="product-dims-title" style={{ fontWeight: 700, textDecoration: "underline", marginBottom: 4 }}>
         מידות המחסן:
       </div>
       {dims.map((d, i) => (
-        <div key={i} style={{ marginBottom: 2 }}>
+        <div key={i} data-id={`product-dim-${i}`} style={{ marginBottom: 2 }}>
           {d}
         </div>
       ))}

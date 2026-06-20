@@ -75,10 +75,11 @@ export default function ProductGallery({
   };
 
   return (
-    <div>
+    <div data-id="ProductGallery">
       {/* Main image */}
-      <div style={{ position: "relative" }}>
+      <div data-id="gallery-main" style={{ position: "relative" }}>
         <button
+          data-id="zoom-open"
           type="button"
           aria-label="הגדל תמונה"
           onClick={() => setZoomed(true)}
@@ -101,16 +102,17 @@ export default function ProductGallery({
 
         {multi && (
           <>
-            <button type="button" aria-label="הקודם" onClick={prev} style={{ ...arrowBtn, right: -14 }}>
+            <button data-id="gallery-prev" type="button" aria-label="הקודם" onClick={prev} style={{ ...arrowBtn, right: -14 }}>
               &#8250;
             </button>
-            <button type="button" aria-label="הבא" onClick={next} style={{ ...arrowBtn, left: -14 }}>
+            <button data-id="gallery-next" type="button" aria-label="הבא" onClick={next} style={{ ...arrowBtn, left: -14 }}>
               &#8249;
             </button>
           </>
         )}
 
         <button
+          data-id="zoom-open-icon"
           type="button"
           aria-label="הגדל תמונה"
           onClick={() => setZoomed(true)}
@@ -139,9 +141,10 @@ export default function ProductGallery({
       </div>
 
       {/* Thumbnails */}
-      <div style={{ display: "flex", gap: 10, marginTop: 12 }}>
+      <div data-id="gallery-thumbnails" style={{ display: "flex", gap: 10, marginTop: 12 }}>
         {images.map((img, i) => (
           <button
+            data-id={`thumbnail-${i}`}
             type="button"
             key={img + i}
             aria-label={`תמונה ${i + 1}`}
@@ -175,6 +178,7 @@ export default function ProductGallery({
       {/* Lightbox — always mounted so it can fade + scale on open AND dismiss */}
       {
         <div
+          data-id="gallery-lightbox"
           role="dialog"
           aria-modal="true"
           aria-label={alt}
@@ -196,6 +200,7 @@ export default function ProductGallery({
           }}
         >
           <button
+            data-id="lightbox-close"
             type="button"
             aria-label="סגור"
             onClick={() => setZoomed(false)}
@@ -207,6 +212,7 @@ export default function ProductGallery({
           {multi && (
             <>
               <button
+                data-id="lightbox-prev"
                 type="button"
                 aria-label="הקודם"
                 onClick={(e) => {
@@ -218,6 +224,7 @@ export default function ProductGallery({
                 &#8250;
               </button>
               <button
+                data-id="lightbox-next"
                 type="button"
                 aria-label="הבא"
                 onClick={(e) => {
@@ -233,6 +240,7 @@ export default function ProductGallery({
 
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
+            data-id="lightbox-image"
             src={images[active]}
             alt={alt}
             onClick={(e) => e.stopPropagation()}
@@ -248,6 +256,7 @@ export default function ProductGallery({
 
           {multi && (
             <span
+              data-id="lightbox-counter"
               dir="ltr"
               style={{
                 position: "absolute",
