@@ -7,9 +7,7 @@ import BuyPanel from "./_components/buy-panel";
 
 const galleryImages = [
   "/products/lehamhasha.png",
-  "/products/gallery-1.jpg",
-  "/products/gallery-2.jpg",
-  "/products/gallery-3.jpg",
+  "/products/panel-shed-render.png",
 ];
 
 const assistant = Assistant({
