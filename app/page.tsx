@@ -27,13 +27,20 @@ export const metadata: Metadata = {
 const product = {
   title: "מחסן גינה פאנל מבודד 2x2 מטר",
   options: [
-    { label: "הובלה+הרכבה:" },
     {
-      label:
-        "במה חיצונית לבחירה (רצפה חיצונית) למחסן מתכת - מתאימה למשטחים לא ישרים, רכים כמו: אדמה, דשא, דשא סינטטי,חצץ:",
+      label: "הובלה+הרכבה:",
+      choices: [
+        { label: "ללא", price: null },
+        { label: "הובלה והרכבה", price: 2350 },
+      ],
     },
-    { label: "תוספת שדרוג דלת:" },
-    { label: "חלונות ופתחי אוורור:" },
+    {
+      label: "ריצפה",
+      choices: [
+        { label: "ללא", price: null },
+        { label: "במת דק מעץ אורן מלא", price: 1650 },
+      ],
+    },
   ],
   buyLabel: "קנה עכשיו",
   oldPrice: "₪ 5,500",
@@ -106,13 +113,19 @@ const selectStyle: CSSProperties = {
   MozAppearance: "none",
 };
 
-function OptionSelect({ label }: { label: string }) {
+type OptionChoice = { label: string; price: number | null };
+
+function OptionSelect({ label, choices }: { label: string; choices: OptionChoice[] }) {
   return (
     <div>
       <label style={{ display: "block", fontSize: 14, color: "#555", marginBottom: 5 }}>{label}</label>
       <div style={{ position: "relative" }}>
-        <select style={selectStyle} defaultValue="">
-          <option value="">בחר</option>
+        <select style={selectStyle} defaultValue="0">
+          {choices.map((c, i) => (
+            <option key={i} value={String(i)}>
+              {c.price != null ? `${c.label} — ₪ ${c.price.toLocaleString("he-IL")}` : c.label}
+            </option>
+          ))}
         </select>
         <span
           style={{
@@ -168,7 +181,7 @@ export default function Home() {
 
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px 22px" }}>
               {product.options.map((opt, i) => (
-                <OptionSelect key={i} label={opt.label} />
+                <OptionSelect key={i} label={opt.label} choices={opt.choices} />
               ))}
             </div>
 
