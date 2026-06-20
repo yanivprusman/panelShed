@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import { Assistant } from "next/font/google";
-import ImagePlaceholder from "./_components/image-placeholder";
+import Product3D from "./_components/product-3d";
 import ProductGallery from "./_components/product-gallery";
 import BuyPanel from "./_components/buy-panel";
 import ProductDims from "./_components/product-dims";
@@ -269,79 +269,24 @@ export default function Home() {
               <ProductDims />
             </div>
 
-            {/* Video */}
+            {/* Interactive 3D shed + garden (CAD embed) */}
             <div style={{ flex: "0 1 340px", minWidth: 280 }}>
-              <div style={{ position: "relative", background: "#000", borderRadius: 2, overflow: "hidden" }}>
-                <ImagePlaceholder
-                  caption="פוסטר וידאו"
-                  style={{ display: "block", width: "100%", height: 430 }}
-                />
-                <div
-                  style={{
-                    position: "absolute",
-                    top: 10,
-                    right: 10,
-                    padding: "5px 9px",
-                    background: "#fff",
-                    borderRadius: 4,
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    fontSize: 12,
-                    color: ACCENT,
-                    fontWeight: 800,
-                  }}
-                >
-                  פאנל-שד
-                </div>
-                <a
-                  href={TEL_URL}
-                  dir="ltr"
-                  style={{
-                    position: "absolute",
-                    left: 0,
-                    right: 0,
-                    bottom: 62,
-                    textAlign: "center",
-                    fontSize: 30,
-                    fontWeight: 800,
-                    color: "#fff",
-                    textDecoration: "none",
-                    textShadow: "0 0 4px #000, 0 0 8px #000",
-                  }}
-                >
-                  {product.phone}
-                </a>
-                <div
-                  style={{
-                    position: "absolute",
-                    left: 0,
-                    right: 0,
-                    bottom: 0,
-                    height: 44,
-                    background: "rgba(20,20,20,.78)",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 12,
-                    padding: "0 12px",
-                    color: "#fff",
-                  }}
-                >
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="#fff">
-                    <path d="M8 5v14l11-7z" />
-                  </svg>
-                  <span style={{ fontSize: 13 }}>0:00 / 0:38</span>
-                  <div
-                    style={{
-                      flex: 1,
-                      height: 3,
-                      background: "rgba(255,255,255,.35)",
-                      borderRadius: 2,
-                      margin: "0 4px",
-                    }}
-                  />
-                </div>
-              </div>
+              <Product3D />
+              <a
+                href={TEL_URL}
+                dir="ltr"
+                style={{
+                  display: "block",
+                  textAlign: "center",
+                  marginTop: 10,
+                  fontSize: 18,
+                  fontWeight: 800,
+                  color: "#2f2f2f",
+                  textDecoration: "none",
+                }}
+              >
+                ☎ {product.phone}
+              </a>
             </div>
           </div>
         </div>
