@@ -1,6 +1,8 @@
 "use client";
 
 import { useMemo, useState, type CSSProperties, type FormEvent } from "react";
+import { useSize } from "./size-context";
+import { SIZES, productTitle } from "./sizes";
 
 type Choice = { label: string; price: number | null };
 type Group = { label: string; choices: Choice[] };
@@ -37,25 +39,45 @@ const inputStyle: CSSProperties = {
   color: "#333",
 };
 
+function Chevron() {
+  return (
+    <span
+      style={{
+        position: "absolute",
+        left: 9,
+        top: "50%",
+        transform: "translateY(-50%)",
+        pointerEvents: "none",
+        color: "#888",
+        fontSize: 11,
+      }}
+    >
+      ▼
+    </span>
+  );
+}
+
 /**
- * Client-side config + buy panel: the delivery/floor dropdowns drive a live
- * total (base + selected add-ons), and "קנה עכשיו" opens an order-request modal
- * that POSTs to /api/orders (a lead, not a payment). Mirrors the design's
- * static config block but makes the price reactive and the buy button real.
+ * Client-side config + buy panel. A size selector drives the base price and the
+ * (reactive) title; delivery/floor dropdowns add surcharges; the total updates
+ * live. "קנה עכשיו" opens an order-request modal that POSTs to /api/orders
+ * (a lead, not a payment). Selected size is shared via SizeProvider so the
+ * description's dimensions block stays in sync.
  */
 export default function BuyPanel({
-  title,
   options,
   buyLabel,
   delivery,
-  basePrice,
 }: {
-  title: string;
   options: Group[];
   buyLabel: string;
   delivery: string;
-  basePrice: number;
 }) {
+  const { sizeIndex, setSizeIndex } = useSize();
+  const size = SIZES[sizeIndex];
+  const base = size.price;
+  const title = productTitle(size.label);
+
   const [sel, setSel] = useState<number[]>(() => options.map(() => 0));
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
@@ -70,7 +92,7 @@ export default function BuyPanel({
     [options, sel],
   );
   const addons = chosen.reduce((s, c) => s + (c.price ?? 0), 0);
-  const newTotal = basePrice + addons;
+  const newTotal = base + addons;
 
   function setChoice(groupIdx: number, choiceIdx: number) {
     setSel((prev) => prev.map((v, i) => (i === groupIdx ? choiceIdx : v)));
@@ -102,11 +124,14 @@ export default function BuyPanel({
           notes,
           title,
           totalIls: newTotal,
-          options: options.map((g, i) => ({
-            label: g.label,
-            choice: chosen[i].label,
-            price: chosen[i].price,
-          })),
+          options: [
+            { label: "גודל", choice: `${size.label} מטר`, price: base },
+            ...options.map((g, i) => ({
+              label: g.label,
+              choice: chosen[i].label,
+              price: chosen[i].price,
+            })),
+          ],
         }),
       });
       const data = await res.json();
@@ -121,8 +146,41 @@ export default function BuyPanel({
 
   return (
     <>
-      {/* Dropdowns — drive the live total */}
+      <h1
+        style={{
+          margin: "0 0 22px",
+          fontSize: 23,
+          fontWeight: 700,
+          color: ORANGE,
+          textAlign: "center",
+        }}
+      >
+        {title}
+      </h1>
+
+      {/* Size + add-on dropdowns — drive the live total */}
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px 22px" }}>
+        <div>
+          <label style={{ display: "block", fontSize: 14, color: "#555", marginBottom: 5 }}>
+            גודל:
+          </label>
+          <div style={{ position: "relative" }}>
+            <select
+              data-id="select-size"
+              style={selectStyle}
+              value={sizeIndex}
+              onChange={(e) => setSizeIndex(Number(e.target.value))}
+            >
+              {SIZES.map((s, j) => (
+                <option key={j} value={j}>
+                  {s.label} מטר — {ils(s.price)}
+                </option>
+              ))}
+            </select>
+            <Chevron />
+          </div>
+        </div>
+
         {options.map((g, i) => (
           <div key={i}>
             <label style={{ display: "block", fontSize: 14, color: "#555", marginBottom: 5 }}>
@@ -140,19 +198,7 @@ export default function BuyPanel({
                   </option>
                 ))}
               </select>
-              <span
-                style={{
-                  position: "absolute",
-                  left: 9,
-                  top: "50%",
-                  transform: "translateY(-50%)",
-                  pointerEvents: "none",
-                  color: "#888",
-                  fontSize: 11,
-                }}
-              >
-                ▼
-              </span>
+              <Chevron />
             </div>
           </div>
         ))}
@@ -287,6 +333,10 @@ export default function BuyPanel({
                     color: "#555",
                   }}
                 >
+                  <div style={{ display: "flex", justifyContent: "space-between" }}>
+                    <span>גודל {size.label} מטר</span>
+                    <span dir="ltr">{ils(base)}</span>
+                  </div>
                   {chosen.map(
                     (c, i) =>
                       c.price != null && (

@@ -4,6 +4,8 @@ import { Assistant } from "next/font/google";
 import ImagePlaceholder from "./_components/image-placeholder";
 import ProductGallery from "./_components/product-gallery";
 import BuyPanel from "./_components/buy-panel";
+import ProductDims from "./_components/product-dims";
+import { SizeProvider } from "./_components/size-context";
 
 const galleryImages = [
   "/products/lehamhasha.png",
@@ -46,7 +48,6 @@ const product = {
     },
   ],
   buyLabel: "קנה עכשיו",
-  basePrice: 4150,
   delivery: "זמן אספקה: 21 ימי עסקים , קיימת אפשרות לאיסוף עצמי",
   trustTitle: "למה לקוחות קונים אצלנו:",
   trustPoints: [
@@ -60,8 +61,6 @@ const product = {
     'הפנל מורכב משתי שכבות של פח מגולוון צבוע בתנור בעובי חצי מ"מ ושכבת פוליסטירן מוקצף בעובי 50 מ"מ.',
     'ההובלה מתייחסת לפריקה מישורית עד 15 מטר ממקום החנייה. ישנה תוספת עבור סבלות, מעבר לנאמר, במזומן ישירות למתקינים.\nהפאנל מבודד עשוי 2 שכבות של פח פלדה 0.5 מ"מ מגולוון וצבוע בתנור.\nבין שתי שכבות הפח קיימת שכבת פוליסטירן מוקצף שמבודד טרמית כ-12 מעלות מהחוץ.\nהמבנים שלנו מתאימים לאקלים הישראלי ועומדים בכל התקנים הנדרשים עפ"י החוק. ולכן ניתן להשתמש בהם כמחסן|משרד|חדר מגורים|חדר עבודה|קליניקה|ן ועוד...',
   ],
-  dimsTitle: 'מידות המחסן:',
-  dims: ['גובה: חד שיפועי 230\\220 ס"מ', "רוחב: 200 ס\"מ", "עומק: 200 ס\"מ"],
   phone: "055-667-7260",
 };
 
@@ -119,6 +118,7 @@ export default function Home() {
       }}
     >
       <div style={{ maxWidth: 1280, margin: "0 auto" }}>
+       <SizeProvider>
         {/* ===== TOP PRODUCT SECTION ===== */}
         <div style={{ display: "flex", gap: 36, alignItems: "flex-start", flexWrap: "wrap" }}>
           {/* Gallery (right in RTL) */}
@@ -128,24 +128,10 @@ export default function Home() {
 
           {/* Config (center) */}
           <div style={{ flex: "1 1 380px", minWidth: 320, order: 2 }}>
-            <h1
-              style={{
-                margin: "0 0 22px",
-                fontSize: 23,
-                fontWeight: 700,
-                color: ORANGE,
-                textAlign: "center",
-              }}
-            >
-              {product.title}
-            </h1>
-
             <BuyPanel
-              title={product.title}
               options={product.options}
               buyLabel={product.buyLabel}
               delivery={product.delivery}
-              basePrice={product.basePrice}
             />
           </div>
 
@@ -280,16 +266,7 @@ export default function Home() {
                   {para}
                 </p>
               ))}
-              <div style={{ marginTop: 22 }}>
-                <div style={{ fontWeight: 700, textDecoration: "underline", marginBottom: 4 }}>
-                  {product.dimsTitle}
-                </div>
-                {product.dims.map((d, i) => (
-                  <div key={i} style={{ marginBottom: 2 }}>
-                    {d}
-                  </div>
-                ))}
-              </div>
+              <ProductDims />
             </div>
 
             {/* Video */}
@@ -368,6 +345,7 @@ export default function Home() {
             </div>
           </div>
         </div>
+       </SizeProvider>
       </div>
     </div>
   );
