@@ -2,6 +2,14 @@ import type { Metadata } from "next";
 import type { CSSProperties, ReactNode } from "react";
 import { Assistant } from "next/font/google";
 import ImagePlaceholder from "./_components/image-placeholder";
+import ProductGallery from "./_components/product-gallery";
+
+const galleryImages = [
+  "/products/panel-shed-2x2.png",
+  "/products/gallery-1.jpg",
+  "/products/gallery-2.jpg",
+  "/products/gallery-3.jpg",
+];
 
 const assistant = Assistant({
   subsets: ["hebrew", "latin"],
@@ -141,93 +149,7 @@ export default function Home() {
         <div style={{ display: "flex", gap: 36, alignItems: "flex-start", flexWrap: "wrap" }}>
           {/* Gallery (right in RTL) */}
           <div style={{ flex: "1 1 380px", maxWidth: 400, order: 1 }}>
-            <div style={{ position: "relative" }}>
-              <ImagePlaceholder
-                src="/products/panel-shed-2x2.png"
-                alt={product.title}
-                iconSize={34}
-                style={{ display: "block", width: "100%", height: 370, borderRadius: 2 }}
-              />
-              <button
-                aria-label="prev"
-                style={{
-                  position: "absolute",
-                  top: "50%",
-                  right: -14,
-                  transform: "translateY(-50%)",
-                  width: 30,
-                  height: 46,
-                  background: "#f3f3f3",
-                  border: "1px solid #e2e2e2",
-                  color: "#9a9a9a",
-                  cursor: "pointer",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  fontSize: 20,
-                }}
-              >
-                ›
-              </button>
-              <button
-                aria-label="next"
-                style={{
-                  position: "absolute",
-                  top: "50%",
-                  left: -14,
-                  transform: "translateY(-50%)",
-                  width: 30,
-                  height: 46,
-                  background: "#f3f3f3",
-                  border: "1px solid #e2e2e2",
-                  color: "#9a9a9a",
-                  cursor: "pointer",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  fontSize: 20,
-                }}
-              >
-                ‹
-              </button>
-              <div
-                style={{
-                  position: "absolute",
-                  bottom: 10,
-                  left: 10,
-                  width: 34,
-                  height: 34,
-                  borderRadius: "50%",
-                  background: "rgba(255,255,255,.85)",
-                  border: "1px solid #ddd",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                }}
-              >
-                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#7a7a7a" strokeWidth="2">
-                  <circle cx="11" cy="11" r="7" />
-                  <line x1="21" y1="21" x2="16.5" y2="16.5" />
-                </svg>
-              </div>
-            </div>
-            <div style={{ display: "flex", gap: 10, marginTop: 12 }}>
-              {[0, 1, 2, 3].map((i) => (
-                <ImagePlaceholder
-                  key={i}
-                  src={i === 0 ? "/products/panel-shed-2x2.png" : undefined}
-                  alt={i === 0 ? product.title : ""}
-                  iconSize={18}
-                  style={{
-                    display: "block",
-                    flex: 1,
-                    height: 62,
-                    border: i === 0 ? "2px solid #b9b9b9" : "1px solid #e6e6e6",
-                    borderRadius: 2,
-                  }}
-                />
-              ))}
-            </div>
+            <ProductGallery images={galleryImages} alt={product.title} />
           </div>
 
           {/* Config (center) */}
