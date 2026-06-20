@@ -16,8 +16,11 @@ export default function Product3D() {
   const s = SIZES[sizeIndex];
   // CAD convention: width × length (= depth) in cm; height = low wall (220).
   const src = `${CAD_BASE}/?embed=1&width=${s.widthCm}&length=${s.depthCm}&height=220`;
+  // Full interactive planner (not the read-only embed), pre-set to this size.
+  const plannerUrl = `${CAD_BASE}/?dcode=panel-shed&width=${s.widthCm}&length=${s.depthCm}&height=220`;
 
   return (
+    <>
     <div style={{ position: "relative", background: "#e8eef0", borderRadius: 2, overflow: "hidden" }}>
       <iframe
         src={src}
@@ -58,5 +61,26 @@ export default function Product3D() {
         תצוגת תלת-ממד · גררו לסיבוב
       </span>
     </div>
+    <a
+      href={plannerUrl}
+      target="_blank"
+      rel="noopener noreferrer"
+      data-id="planner-link"
+      style={{
+        display: "block",
+        marginTop: 10,
+        textAlign: "center",
+        padding: "11px 14px",
+        background: "#2f8fd6",
+        color: "#fff",
+        borderRadius: 4,
+        fontSize: 15,
+        fontWeight: 700,
+        textDecoration: "none",
+      }}
+    >
+      מתכנן המחסן ›
+    </a>
+    </>
   );
 }

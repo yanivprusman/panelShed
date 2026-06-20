@@ -230,7 +230,7 @@ export default function Home() {
               margin: 0,
               fontSize: 25,
               fontWeight: 700,
-              color: "#1aa897",
+              color: ACCENT,
               textAlign: "right",
               borderBottom: "1px solid #e2e2e2",
               paddingBottom: 10,
