@@ -44,3 +44,6 @@ next-env.d.ts
 lib/feedback-lib/
 app/api/feedback/
 app/feedback-lib-issues/
+
+# order-request data (lead storage)
+/data/

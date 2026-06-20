@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
-import type { CSSProperties, ReactNode } from "react";
+import type { ReactNode } from "react";
 import { Assistant } from "next/font/google";
 import ImagePlaceholder from "./_components/image-placeholder";
 import ProductGallery from "./_components/product-gallery";
+import BuyPanel from "./_components/buy-panel";
 
 const galleryImages = [
   "/products/panel-shed-2x2.png",
@@ -43,8 +44,8 @@ const product = {
     },
   ],
   buyLabel: "קנה עכשיו",
-  oldPrice: "₪ 5,500",
-  newPrice: "₪ 4,150",
+  basePrice: 4150,
+  comparePrice: 5500,
   delivery: "זמן אספקה: 21 ימי עסקים , קיימת אפשרות לאיסוף עצמי",
   trustTitle: "למה לקוחות קונים אצלנו:",
   trustPoints: [
@@ -98,53 +99,6 @@ const badges: { label: string; icon: ReactNode }[] = [
   },
 ];
 
-const selectStyle: CSSProperties = {
-  width: "100%",
-  height: 34,
-  padding: "0 10px",
-  background: "#f1f1f1",
-  border: "1px solid #cfcfcf",
-  borderRadius: 2,
-  fontFamily: "inherit",
-  fontSize: 14,
-  color: "#444",
-  appearance: "none",
-  WebkitAppearance: "none",
-  MozAppearance: "none",
-};
-
-type OptionChoice = { label: string; price: number | null };
-
-function OptionSelect({ label, choices }: { label: string; choices: OptionChoice[] }) {
-  return (
-    <div>
-      <label style={{ display: "block", fontSize: 14, color: "#555", marginBottom: 5 }}>{label}</label>
-      <div style={{ position: "relative" }}>
-        <select style={selectStyle} defaultValue="0">
-          {choices.map((c, i) => (
-            <option key={i} value={String(i)}>
-              {c.price != null ? `${c.label} — ₪ ${c.price.toLocaleString("he-IL")}` : c.label}
-            </option>
-          ))}
-        </select>
-        <span
-          style={{
-            position: "absolute",
-            left: 9,
-            top: "50%",
-            transform: "translateY(-50%)",
-            pointerEvents: "none",
-            color: "#888",
-            fontSize: 11,
-          }}
-        >
-          ▼
-        </span>
-      </div>
-    </div>
-  );
-}
-
 export default function Home() {
   return (
     <div
@@ -179,44 +133,14 @@ export default function Home() {
               {product.title}
             </h1>
 
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px 22px" }}>
-              {product.options.map((opt, i) => (
-                <OptionSelect key={i} label={opt.label} choices={opt.choices} />
-              ))}
-            </div>
-
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                marginTop: 26,
-              }}
-            >
-              <button
-                style={{
-                  background: "#36a18d",
-                  color: "#fff",
-                  border: "none",
-                  borderRadius: 3,
-                  padding: "14px 40px",
-                  fontFamily: "inherit",
-                  fontSize: 17,
-                  fontWeight: 600,
-                  cursor: "pointer",
-                }}
-              >
-                {product.buyLabel}
-              </button>
-              <div style={{ textAlign: "left" }}>
-                <div style={{ textDecoration: "line-through", color: "#9a9a9a", fontSize: 15 }}>
-                  {product.oldPrice}
-                </div>
-                <div style={{ fontSize: 26, fontWeight: 700, color: "#2f2f2f" }}>{product.newPrice}</div>
-              </div>
-            </div>
-
-            <p style={{ margin: "22px 0 0", fontSize: 14, color: "#555" }}>{product.delivery}</p>
+            <BuyPanel
+              title={product.title}
+              options={product.options}
+              buyLabel={product.buyLabel}
+              delivery={product.delivery}
+              basePrice={product.basePrice}
+              comparePrice={product.comparePrice}
+            />
           </div>
 
           {/* Trust column (left) */}
