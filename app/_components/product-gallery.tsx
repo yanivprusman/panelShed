@@ -46,16 +46,18 @@ export default function ProductGallery({
     position: "absolute",
     top: "50%",
     transform: "translateY(-50%)",
-    width: 30,
-    height: 46,
-    background: "#f3f3f3",
-    border: "1px solid #e2e2e2",
+    width: 34,
+    height: 50,
+    background: "#fff",
+    border: "1px solid #e8e8e8",
+    borderRadius: 6,
     color: "#9a9a9a",
     cursor: "pointer",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    fontSize: 20,
+    fontSize: 22,
+    boxShadow: "0 2px 6px rgba(0,0,0,.08)",
     zIndex: 2,
   };
 
@@ -96,7 +98,7 @@ export default function ProductGallery({
             src={images[active]}
             alt={alt}
             iconSize={34}
-            style={{ display: "block", width: "100%", height: 370, borderRadius: 2 }}
+            style={{ display: "block", width: "100%", height: 440, borderRadius: 8 }}
           />
         </button>
 
@@ -118,22 +120,23 @@ export default function ProductGallery({
           onClick={() => setZoomed(true)}
           style={{
             position: "absolute",
-            bottom: 10,
-            left: 10,
-            width: 34,
-            height: 34,
+            bottom: 12,
+            left: 12,
+            width: 38,
+            height: 38,
             borderRadius: "50%",
-            background: "rgba(255,255,255,.85)",
-            border: "1px solid #ddd",
+            background: "rgba(255,255,255,.92)",
+            border: "1px solid #e2e2e2",
             cursor: "pointer",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
             padding: 0,
+            boxShadow: "0 2px 6px rgba(0,0,0,.1)",
             zIndex: 2,
           }}
         >
-          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#7a7a7a" strokeWidth="2">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#7a7a7a" strokeWidth="2">
             <circle cx="11" cy="11" r="7" />
             <line x1="21" y1="21" x2="16.5" y2="16.5" />
           </svg>
@@ -166,9 +169,9 @@ export default function ProductGallery({
               style={{
                 display: "block",
                 width: "100%",
-                height: 62,
-                border: i === active ? "2px solid #b9b9b9" : "1px solid #e6e6e6",
-                borderRadius: 2,
+                height: 64,
+                border: i === active ? "2px solid #2f8fd6" : "1px solid #e6e6e6",
+                borderRadius: 6,
               }}
             />
           </button>

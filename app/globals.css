@@ -1,3 +1,55 @@
 @import "tailwindcss";
 @source "../../../automateLinux/packages/feedback-lib/src";
 @source "../../../automateLinux/packages/feedback-lib-launcher/src";
+
+/* ── Garden Shed Product Page — responsive + hover rules ──────────────────
+   Kept in CSS (not inline) so the buy button can hover and the config grid /
+   3D frame can collapse responsively, which inline styles can't express. */
+
+.config-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px 18px;
+}
+
+@media (max-width: 560px) {
+  .config-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* "קנה עכשיו" — background lives here so :hover can override it. */
+.buy-btn {
+  background: #2f8fd6;
+  transition: background 140ms ease;
+}
+
+.buy-btn:hover {
+  background: #2576b5;
+}
+
+/* CAD planner embed: taller on desktop, shorter on phones. */
+.cad-iframe {
+  display: block;
+  width: 100%;
+  height: 440px;
+  border: 0;
+}
+
+@media (max-width: 860px) {
+  .cad-iframe {
+    height: 340px;
+  }
+}
+
+/* The 3D column is pulled up to align with the description heading on desktop;
+   reset that once it wraps below the text on narrow screens. */
+.product-3d-column {
+  margin-top: -40px;
+}
+
+@media (max-width: 860px) {
+  .product-3d-column {
+    margin-top: 0;
+  }
+}

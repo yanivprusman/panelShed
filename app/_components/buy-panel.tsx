@@ -1,8 +1,16 @@
 "use client";
 
-import { useMemo, useState, type CSSProperties, type FormEvent } from "react";
+import {
+  useMemo,
+  useState,
+  type CSSProperties,
+  type FormEvent,
+  type ReactNode,
+} from "react";
 import { useSize } from "./size-context";
 import { SIZES, productTitle } from "./sizes";
+import { whatsappUrl } from "./contact";
+import { WhatsAppIcon, CheckIcon } from "./icons";
 
 type Choice = { label: string; price: number | null };
 type Group = { label: string; choices: Choice[] };
@@ -12,11 +20,11 @@ const ACCENT = "#2f8fd6";
 
 const selectStyle: CSSProperties = {
   width: "100%",
-  height: 34,
-  padding: "0 10px",
-  background: "#f1f1f1",
-  border: "1px solid #cfcfcf",
-  borderRadius: 2,
+  height: 42,
+  padding: "0 12px",
+  background: "#f5f7f8",
+  border: "1px solid #d8dde0",
+  borderRadius: 7,
   fontFamily: "inherit",
   fontSize: 14,
   color: "#444",
@@ -29,14 +37,58 @@ const selectStyle: CSSProperties = {
 const inputStyle: CSSProperties = {
   width: "100%",
   boxSizing: "border-box",
-  padding: "10px 12px",
+  padding: "11px 13px",
   marginBottom: 10,
-  border: "1px solid #cfcfcf",
-  borderRadius: 3,
+  border: "1px solid #d8dde0",
+  borderRadius: 7,
   fontFamily: "inherit",
   fontSize: 14,
   color: "#333",
 };
+
+const labelStyle: CSSProperties = {
+  display: "block",
+  fontSize: 13,
+  color: "#666",
+  marginBottom: 6,
+  fontWeight: 600,
+};
+
+const divider: CSSProperties = { height: 1, background: "#eee", margin: "20px 0" };
+
+// Trust badges along the bottom of the card (presentational, static).
+const badges: { label: string; icon: ReactNode }[] = [
+  {
+    label: "תשלום מאובטח",
+    icon: (
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#9a9a9a" strokeWidth="1.5">
+        <rect x="3" y="5" width="18" height="14" rx="2" />
+        <line x1="3" y1="9" x2="21" y2="9" />
+        <line x1="6" y1="14" x2="11" y2="14" />
+      </svg>
+    ),
+  },
+  {
+    label: "משלוחים מהירים",
+    icon: (
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#9a9a9a" strokeWidth="1.5">
+        <rect x="1" y="6" width="13" height="10" rx="1" />
+        <path d="M14 9h4l3 3v4h-7z" />
+        <circle cx="6" cy="18" r="1.6" />
+        <circle cx="18" cy="18" r="1.6" />
+      </svg>
+    ),
+  },
+  {
+    label: "מוצרים באחריות",
+    icon: (
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#9a9a9a" strokeWidth="1.5">
+        <path d="M12 3l7 3v5c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6z" />
+        <path d="M9 12l2 2 4-4" />
+      </svg>
+    ),
+  },
+];
 
 function Chevron() {
   return (
@@ -44,12 +96,12 @@ function Chevron() {
       data-id="select-chevron"
       style={{
         position: "absolute",
-        left: 9,
+        left: 11,
         top: "50%",
         transform: "translateY(-50%)",
         pointerEvents: "none",
-        color: "#888",
-        fontSize: 11,
+        color: "#8a8a8a",
+        fontSize: 10,
       }}
     >
       ▼
@@ -58,20 +110,30 @@ function Chevron() {
 }
 
 /**
- * Client-side config + buy panel. A size selector drives the base price and the
- * (reactive) title; delivery/floor dropdowns add surcharges; the total updates
- * live. "קנה עכשיו" opens an order-request modal that POSTs to /api/orders
- * (a lead, not a payment). Selected size is shared via SizeProvider so the
- * description's dimensions block stays in sync.
+ * The full purchase card: title, live price, size + add-on dropdowns, buy
+ * button, delivery note, trust points/badges and an "ask on WhatsApp" link —
+ * all in one bordered card (per the imported design). A size selector drives
+ * the base price and reactive title; delivery/floor dropdowns add surcharges;
+ * the total updates live. "קנה עכשיו" opens an order-request modal that POSTs
+ * to /api/orders (a lead, not a payment). Selected size is shared via
+ * SizeProvider so the description's dimensions block stays in sync.
  */
 export default function BuyPanel({
   options,
   buyLabel,
   delivery,
+  trustTitle,
+  trustPoints,
+  askLabel,
+  showTrustBadges = true,
 }: {
   options: Group[];
   buyLabel: string;
   delivery: string;
+  trustTitle: string;
+  trustPoints: string[];
+  askLabel: string;
+  showTrustBadges?: boolean;
 }) {
   const { sizeIndex, setSizeIndex } = useSize();
   const size = SIZES[sizeIndex];
@@ -93,6 +155,8 @@ export default function BuyPanel({
   );
   const addons = chosen.reduce((s, c) => s + (c.price ?? 0), 0);
   const newTotal = base + addons;
+
+  const askWhatsappUrl = whatsappUrl("שלום, אשמח לקבל פרטים על " + title);
 
   function setChoice(groupIdx: number, choiceIdx: number) {
     setSel((prev) => prev.map((v, i) => (i === groupIdx ? choiceIdx : v)));
@@ -145,26 +209,37 @@ export default function BuyPanel({
   }
 
   return (
-    <>
+    <div
+      data-id="purchase-card"
+      style={{
+        border: "1px solid #e8e8e8",
+        borderRadius: 12,
+        background: "#fff",
+        boxShadow: "0 1px 3px rgba(0,0,0,.05)",
+        padding: "26px 26px 22px",
+      }}
+    >
       <h1
         data-id="buy-panel-title"
-        style={{
-          margin: "0 0 22px",
-          fontSize: 23,
-          fontWeight: 700,
-          color: ACCENT,
-          textAlign: "center",
-        }}
+        style={{ margin: "0 0 12px", fontSize: 26, fontWeight: 800, color: ACCENT, lineHeight: 1.25 }}
       >
         {title}
       </h1>
 
+      {/* Live total + tax note */}
+      <div data-id="price-row" style={{ display: "flex", alignItems: "baseline", gap: 10, marginBottom: 20 }}>
+        <span data-id="total-price" dir="ltr" style={{ fontSize: 34, fontWeight: 800, color: "#1a1a1a", lineHeight: 1 }}>
+          {ils(newTotal)}
+        </span>
+        <span data-id="tax-note" style={{ fontSize: 14, color: "#8a8a8a" }}>כולל מע&quot;מ</span>
+      </div>
+
+      <div data-id="card-divider-1" style={{ ...divider, margin: "0 0 20px" }} />
+
       {/* Size + add-on dropdowns — drive the live total */}
-      <div data-id="config-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px 22px" }}>
+      <div data-id="config-grid" className="config-grid">
         <div data-id="size-field">
-          <label data-id="size-label" style={{ display: "block", fontSize: 14, color: "#555", marginBottom: 5 }}>
-            גודל:
-          </label>
+          <label data-id="size-label" style={labelStyle}>גודל</label>
           <div data-id="size-select-wrap" style={{ position: "relative" }}>
             <select
               data-id="select-size"
@@ -184,9 +259,7 @@ export default function BuyPanel({
 
         {options.map((g, i) => (
           <div key={i} data-id={`option-field-${i}`}>
-            <label data-id={`option-label-${i}`} style={{ display: "block", fontSize: 14, color: "#555", marginBottom: 5 }}>
-              {g.label}
-            </label>
+            <label data-id={`option-label-${i}`} style={labelStyle}>{g.label}</label>
             <div data-id={`option-select-wrap-${i}`} style={{ position: "relative" }}>
               <select
                 data-id={`option-select-${i}`}
@@ -206,46 +279,98 @@ export default function BuyPanel({
         ))}
       </div>
 
-      {/* Buy + live price */}
-      <div
-        data-id="buy-row"
+      <button
+        type="button"
+        data-id="buy-now"
+        className="buy-btn"
+        onClick={() => setOpen(true)}
         style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          marginTop: 26,
+          width: "100%",
+          marginTop: 22,
+          color: "#fff",
+          border: "none",
+          borderRadius: 8,
+          padding: 15,
+          fontFamily: "inherit",
+          fontSize: 18,
+          fontWeight: 700,
+          cursor: "pointer",
         }}
       >
-        <button
-          type="button"
-          data-id="buy-now"
-          onClick={() => setOpen(true)}
-          style={{
-            background: ACCENT,
-            color: "#fff",
-            border: "none",
-            borderRadius: 3,
-            padding: "14px 40px",
-            fontFamily: "inherit",
-            fontSize: 17,
-            fontWeight: 600,
-            cursor: "pointer",
-          }}
-        >
-          {buyLabel}
-        </button>
-        <div data-id="price-wrap" style={{ textAlign: "left" }}>
-          <div
-            data-id="total-price"
-            style={{ fontSize: 26, fontWeight: 700, color: "#2f2f2f" }}
-            dir="ltr"
-          >
-            {ils(newTotal)}
-          </div>
-        </div>
-      </div>
+        {buyLabel}
+      </button>
 
-      <p data-id="delivery-note" style={{ margin: "22px 0 0", fontSize: 14, color: "#555" }}>{delivery}</p>
+      <p data-id="delivery-note" style={{ margin: "14px 0 0", fontSize: 13.5, color: "#777", lineHeight: 1.5 }}>
+        {delivery}
+      </p>
+
+      <div data-id="card-divider-2" style={divider} />
+
+      {/* Trust points */}
+      <div data-id="trust-title" style={{ fontSize: 14, fontWeight: 700, color: ACCENT, marginBottom: 10 }}>
+        {trustTitle}
+      </div>
+      <ul
+        data-id="trust-points-list"
+        style={{ listStyle: "none", margin: "0 0 18px", padding: 0, display: "flex", flexDirection: "column", gap: 9 }}
+      >
+        {trustPoints.map((pt, i) => (
+          <li
+            key={i}
+            data-id={`trust-point-${i}`}
+            style={{ fontSize: 14, color: "#4a4a4a", display: "flex", gap: 9, alignItems: "flex-start" }}
+          >
+            <CheckIcon size={18} />
+            <span data-id={`trust-point-text-${i}`}>{pt}</span>
+          </li>
+        ))}
+      </ul>
+
+      {showTrustBadges && (
+        <div data-id="badges-row" style={{ display: "flex", gap: 8, marginBottom: 18 }}>
+          {badges.map((b, i) => (
+            <div
+              key={i}
+              data-id={`badge-${i}`}
+              style={{
+                flex: 1,
+                border: "1px solid #ededed",
+                borderRadius: 8,
+                padding: "12px 4px 10px",
+                textAlign: "center",
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                gap: 8,
+              }}
+            >
+              <span data-id={`badge-icon-${i}`}>{b.icon}</span>
+              <span data-id={`badge-label-${i}`} style={{ fontSize: 11, color: "#666", lineHeight: 1.25 }}>
+                {b.label}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <a
+        data-id="whatsapp-ask-link"
+        href={askWhatsappUrl}
+        target="_blank"
+        rel="noopener noreferrer"
+        style={{
+          display: "inline-flex",
+          alignItems: "center",
+          gap: 8,
+          fontSize: 14,
+          fontWeight: 600,
+          color: "#3a3a3a",
+          textDecoration: "none",
+        }}
+      >
+        <WhatsAppIcon size={20} />
+        {askLabel}
+      </a>
 
       {/* Order-request modal */}
       {open && (
@@ -268,13 +393,14 @@ export default function BuyPanel({
         >
           <div
             data-id="order-modal-box"
+            dir="rtl"
             onClick={(e) => e.stopPropagation()}
             style={{
               width: "100%",
               maxWidth: 460,
               background: "#fff",
-              borderRadius: 8,
-              padding: 24,
+              borderRadius: 12,
+              padding: 26,
               boxShadow: "0 20px 60px rgba(0,0,0,.3)",
               maxHeight: "90vh",
               overflowY: "auto",
@@ -285,8 +411,8 @@ export default function BuyPanel({
                 <div
                   data-id="order-success-icon"
                   style={{
-                    width: 54,
-                    height: 54,
+                    width: 56,
+                    height: 56,
                     borderRadius: "50%",
                     background: "#e6f1fb",
                     color: ACCENT,
@@ -294,15 +420,15 @@ export default function BuyPanel({
                     alignItems: "center",
                     justifyContent: "center",
                     margin: "0 auto 14px",
-                    fontSize: 28,
+                    fontSize: 30,
                   }}
                 >
                   ✓
                 </div>
-                <h3 data-id="order-success-title" style={{ margin: "0 0 8px", fontSize: 20, fontWeight: 700, color: "#2f2f2f" }}>
+                <h3 data-id="order-success-title" style={{ margin: "0 0 8px", fontSize: 21, fontWeight: 800, color: "#2f2f2f" }}>
                   הבקשה התקבלה!
                 </h3>
-                <p data-id="order-success-text" style={{ margin: "0 0 6px", fontSize: 14, color: "#555" }}>
+                <p data-id="order-success-text" style={{ margin: "0 0 6px", fontSize: 14, color: "#555", lineHeight: 1.6 }}>
                   תודה, נחזור אליכם בהקדם לאישור ההזמנה ותיאום אספקה.
                 </p>
                 <p data-id="order-success-id" style={{ margin: "0 0 18px", fontSize: 12, color: "#999" }} dir="ltr">
@@ -316,11 +442,12 @@ export default function BuyPanel({
                     background: ACCENT,
                     color: "#fff",
                     border: "none",
-                    borderRadius: 3,
-                    padding: "10px 28px",
+                    borderRadius: 7,
+                    padding: "11px 30px",
                     fontSize: 15,
-                    fontWeight: 600,
+                    fontWeight: 700,
                     cursor: "pointer",
+                    fontFamily: "inherit",
                   }}
                 >
                   סגירה
@@ -328,7 +455,7 @@ export default function BuyPanel({
               </div>
             ) : (
               <>
-                <h3 data-id="order-form-title" style={{ margin: "0 0 12px", fontSize: 19, fontWeight: 700, color: ACCENT }}>
+                <h3 data-id="order-form-title" style={{ margin: "0 0 14px", fontSize: 19, fontWeight: 800, color: ACCENT }}>
                   {title}
                 </h3>
                 <div
@@ -336,19 +463,22 @@ export default function BuyPanel({
                   style={{
                     borderBottom: "1px solid #eee",
                     paddingBottom: 12,
-                    marginBottom: 14,
+                    marginBottom: 16,
                     fontSize: 14,
                     color: "#555",
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: 6,
                   }}
                 >
-                  <div data-id="summary-row-size" style={{ display: "flex", justifyContent: "space-between" }}>
+                  <div data-id="summary-row-size" style={{ display: "flex", justifyContent: "space-between", gap: 12 }}>
                     <span data-id="summary-size-label">גודל {size.label} מטר</span>
                     <span data-id="summary-size-price" dir="ltr">{ils(base)}</span>
                   </div>
                   {chosen.map(
                     (c, i) =>
                       c.price != null && (
-                        <div key={i} data-id={`summary-row-${i}`} style={{ display: "flex", justifyContent: "space-between" }}>
+                        <div key={i} data-id={`summary-row-${i}`} style={{ display: "flex", justifyContent: "space-between", gap: 12 }}>
                           <span data-id={`summary-choice-label-${i}`}>{c.label}</span>
                           <span data-id={`summary-choice-price-${i}`} dir="ltr">{ils(c.price)}</span>
                         </div>
@@ -356,13 +486,7 @@ export default function BuyPanel({
                   )}
                   <div
                     data-id="summary-total-row"
-                    style={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      marginTop: 8,
-                      fontWeight: 700,
-                      color: "#2f2f2f",
-                    }}
+                    style={{ display: "flex", justifyContent: "space-between", gap: 12, marginTop: 6, fontWeight: 800, color: "#2f2f2f", fontSize: 15 }}
                   >
                     <span data-id="summary-total-label">סה&quot;כ</span>
                     <span data-id="summary-total-price" dir="ltr">{ils(newTotal)}</span>
@@ -396,7 +520,7 @@ export default function BuyPanel({
                   {error && (
                     <p data-id="order-error" style={{ color: "#c0392b", fontSize: 13, margin: "0 0 10px" }}>{error}</p>
                   )}
-                  <p data-id="order-disclaimer" style={{ fontSize: 12, color: "#999", margin: "0 0 14px" }}>
+                  <p data-id="order-disclaimer" style={{ fontSize: 12, color: "#999", margin: "0 0 14px", lineHeight: 1.5 }}>
                     זו בקשת הזמנה ואינה חיוב. לא נשמרים פרטי אשראי — נתאם איתכם תשלום ישירות.
                   </p>
                   <div data-id="order-actions" style={{ display: "flex", gap: 10 }}>
@@ -409,12 +533,13 @@ export default function BuyPanel({
                         background: ACCENT,
                         color: "#fff",
                         border: "none",
-                        borderRadius: 3,
-                        padding: "12px",
+                        borderRadius: 7,
+                        padding: 12,
                         fontSize: 16,
-                        fontWeight: 600,
+                        fontWeight: 700,
                         cursor: submitting ? "default" : "pointer",
                         opacity: submitting ? 0.6 : 1,
+                        fontFamily: "inherit",
                       }}
                     >
                       {submitting ? "שולח…" : "שליחת בקשה"}
@@ -427,10 +552,11 @@ export default function BuyPanel({
                         background: "#f1f1f1",
                         color: "#555",
                         border: "1px solid #ddd",
-                        borderRadius: 3,
+                        borderRadius: 7,
                         padding: "12px 18px",
                         fontSize: 15,
                         cursor: "pointer",
+                        fontFamily: "inherit",
                       }}
                     >
                       ביטול
@@ -442,6 +568,6 @@ export default function BuyPanel({
           </div>
         </div>
       )}
-    </>
+    </div>
   );
 }

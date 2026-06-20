@@ -1,10 +1,11 @@
 import type { Metadata } from "next";
-import type { ReactNode } from "react";
 import { Assistant } from "next/font/google";
 import Product3D from "./_components/product-3d";
 import ProductGallery from "./_components/product-gallery";
 import BuyPanel from "./_components/buy-panel";
 import ProductDims from "./_components/product-dims";
+import SiteHeader from "./_components/site-header";
+import SiteFooter from "./_components/site-footer";
 import { SizeProvider } from "./_components/size-context";
 
 const galleryImages = [
@@ -14,7 +15,7 @@ const galleryImages = [
 
 const assistant = Assistant({
   subsets: ["hebrew", "latin"],
-  weight: ["300", "400", "600", "700", "800"],
+  weight: ["300", "400", "500", "600", "700", "800"],
   display: "swap",
 });
 
@@ -24,13 +25,12 @@ export const metadata: Metadata = {
     "מחסן גינה מפאנל מבודד בעובי 5 ס\"מ — חסין לפגעי מזג אוויר, בידוד וגימור ברמה גבוהה, מיוצר בארץ.",
 };
 
-// ── Content (ported from the design's renderVals) ──────────────────────────
+// ── Content (ported from the imported design's renderVals) ─────────────────
 const product = {
-  title: "מחסן גינה פאנל מבודד 2x2 מטר",
   // LOCKED: exactly two configurator options — delivery (הובלה+הרכבה) and
   // floor (ריצפה). Do NOT re-add "תוספת שדרוג דלת" (door) or "חלונות ופתחי
   // אוורור" (windows/vents) — the user removed them and they regressed; see
-  // AGENTS.md and `npm run check:regression`.
+  // AGENTS.md.
   options: [
     {
       label: "הובלה+הרכבה:",
@@ -61,49 +61,9 @@ const product = {
     'הפנל מורכב משתי שכבות של פח מגולוון צבוע בתנור בעובי חצי מ"מ ושכבת פוליסטירן מוקצף בעובי 50 מ"מ.',
     'ההובלה מתייחסת לפריקה מישורית עד 15 מטר ממקום החנייה. ישנה תוספת עבור סבלות, מעבר לנאמר, במזומן ישירות למתקינים.\nהפאנל מבודד עשוי 2 שכבות של פח פלדה 0.5 מ"מ מגולוון וצבוע בתנור.\nבין שתי שכבות הפח קיימת שכבת פוליסטירן מוקצף שמבודד טרמית כ-12 מעלות מהחוץ.\nהמבנים שלנו מתאימים לאקלים הישראלי ועומדים בכל התקנים הנדרשים עפ"י החוק. ולכן ניתן להשתמש בהם כמחסן|משרד|חדר מגורים|חדר עבודה|קליניקה|עמדת שומר|ן ועוד...',
   ],
-  phone: "055-667-7260",
 };
 
 const ACCENT = "#2f8fd6";
-
-const PHONE_E164 = "972556677260";
-const TEL_URL = `tel:+${PHONE_E164}`;
-const WHATSAPP_URL = `https://wa.me/${PHONE_E164}?text=${encodeURIComponent(
-  "שלום, אשמח לקבל פרטים על מחסן גינה פאנל מבודד 2x2 מטר",
-)}`;
-
-const badges: { label: string; icon: ReactNode }[] = [
-  {
-    label: "תשלום מאובטח",
-    icon: (
-      <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-        <rect x="3" y="5" width="18" height="14" rx="2" />
-        <line x1="3" y1="9" x2="21" y2="9" />
-        <line x1="6" y1="14" x2="11" y2="14" />
-      </svg>
-    ),
-  },
-  {
-    label: "משלוחים מהירים",
-    icon: (
-      <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-        <rect x="1" y="6" width="13" height="10" rx="1" />
-        <path d="M14 9h4l3 3v4h-7z" />
-        <circle cx="6" cy="18" r="1.6" />
-        <circle cx="18" cy="18" r="1.6" />
-      </svg>
-    ),
-  },
-  {
-    label: "מוצרים באחריות",
-    icon: (
-      <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-        <path d="M12 3l7 3v5c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6z" />
-        <path d="M9 12l2 2 4-4" />
-      </svg>
-    ),
-  },
-];
 
 export default function Home() {
   return (
@@ -115,193 +75,88 @@ export default function Home() {
         color: "#3a3a3a",
         background: "#ffffff",
         minHeight: "100vh",
-        padding: "36px 28px 80px",
+        padding: "28px 24px 80px",
+        WebkitFontSmoothing: "antialiased",
       }}
     >
-      <div data-id="page-container" style={{ maxWidth: 1280, margin: "0 auto" }}>
-       <SizeProvider>
-        {/* ===== TOP PRODUCT SECTION ===== */}
-        <div data-id="top-product-section" style={{ display: "flex", gap: 36, alignItems: "flex-start", flexWrap: "wrap" }}>
-          {/* Gallery (right in RTL) */}
-          <div data-id="gallery-column" style={{ flex: "1 1 380px", maxWidth: 400, order: 1 }}>
-            <ProductGallery images={galleryImages} alt={product.title} />
-          </div>
+      <div data-id="page-container" style={{ maxWidth: 1180, margin: "0 auto" }}>
+        <SiteHeader />
 
-          {/* Config (center) */}
-          <div data-id="config-column" style={{ flex: "1 1 380px", minWidth: 320, order: 2 }}>
-            <BuyPanel
-              options={product.options}
-              buyLabel={product.buyLabel}
-              delivery={product.delivery}
-            />
-          </div>
-
-          {/* Trust column (left) */}
+        <SizeProvider>
+          {/* ===== TOP: GALLERY + PURCHASE CARD ===== */}
           <div
-            data-id="trust-column"
-            style={{
-              flex: "0 1 240px",
-              minWidth: 220,
-              order: 3,
-              borderRight: "1px solid #ececec",
-              paddingRight: 24,
-            }}
+            data-id="top-product-section"
+            style={{ display: "flex", gap: 40, alignItems: "flex-start", flexWrap: "wrap" }}
           >
-            <h3 data-id="trust-title" style={{ margin: "0 0 12px", fontSize: 17, fontWeight: 700, color: ACCENT }}>
-              {product.trustTitle}
-            </h3>
-            <ul
-              data-id="trust-points-list"
-              style={{
-                listStyle: "none",
-                margin: "0 0 22px",
-                padding: 0,
-                display: "flex",
-                flexDirection: "column",
-                gap: 8,
-              }}
-            >
-              {product.trustPoints.map((pt, i) => (
-                <li
-                  key={i}
-                  data-id={`trust-point-${i}`}
-                  style={{ fontSize: 14, color: "#4a4a4a", display: "flex", gap: 6, alignItems: "flex-start" }}
-                >
-                  <span data-id={`trust-point-bullet-${i}`} style={{ color: ACCENT, fontSize: 11, lineHeight: 1.5 }}>◀</span>
-                  <span data-id={`trust-point-text-${i}`}>{pt}</span>
-                </li>
-              ))}
-            </ul>
-
-            <div data-id="badges-row" style={{ display: "flex", gap: 8, marginBottom: 18 }}>
-              {badges.map((b, i) => (
-                <div
-                  key={i}
-                  data-id={`badge-${i}`}
-                  style={{
-                    flex: 1,
-                    border: "1px solid #e6e6e6",
-                    borderRadius: 3,
-                    padding: "12px 4px 10px",
-                    textAlign: "center",
-                    display: "flex",
-                    flexDirection: "column",
-                    alignItems: "center",
-                    gap: 8,
-                  }}
-                >
-                  <span data-id={`badge-icon-${i}`} style={{ color: "#9a9a9a" }}>{b.icon}</span>
-                  <span data-id={`badge-label-${i}`} style={{ fontSize: 11, color: "#666", lineHeight: 1.25 }}>{b.label}</span>
-                </div>
-              ))}
+            {/* Gallery (right in RTL) */}
+            <div data-id="gallery-column" style={{ flex: "0 1 480px", maxWidth: 480, minWidth: 300, order: 1 }}>
+              <ProductGallery images={galleryImages} alt="מחסן גינה פאנל מבודד" />
             </div>
 
-            <a
-              data-id="whatsapp-ask-link"
-              href={WHATSAPP_URL}
-              target="_blank"
-              rel="noopener noreferrer"
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: 7,
-                fontSize: 14,
-                color: "#3a3a3a",
-                textDecoration: "none",
-              }}
-            >
-              <span
-                data-id="whatsapp-icon"
-                style={{
-                  width: 22,
-                  height: 22,
-                  display: "inline-flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                }}
-              >
-                <svg width="20" height="20" viewBox="0 0 32 32" fill="#25D366" aria-hidden="true">
-                  <path d="M16 .5C7.4.5.5 7.4.5 16c0 2.8.7 5.4 2 7.7L.5 31.5l8-2.1c2.2 1.2 4.8 1.9 7.5 1.9 8.6 0 15.5-6.9 15.5-15.5S24.6.5 16 .5zm0 28c-2.4 0-4.7-.6-6.7-1.8l-.5-.3-4.7 1.2 1.3-4.6-.3-.5C3.6 20.3 3 18.2 3 16 3 8.8 8.8 3 16 3s13 5.8 13 13-5.8 12.5-13 12.5z" />
-                  <path d="M23.4 19.2c-.4-.2-2.3-1.1-2.6-1.3-.4-.1-.6-.2-.9.2s-1 1.3-1.2 1.5c-.2.2-.4.3-.8.1s-1.6-.6-3-1.9c-1.1-1-1.9-2.2-2.1-2.6s0-.6.2-.8c.2-.2.4-.4.5-.6.2-.2.2-.4.4-.6.1-.3 0-.5 0-.7s-.9-2.1-1.2-2.9c-.3-.7-.6-.6-.9-.6h-.7c-.2 0-.6.1-.9.5s-1.2 1.2-1.2 2.9 1.2 3.4 1.4 3.6c.2.2 2.4 3.7 5.8 5.1.8.4 1.5.6 2 .7.8.3 1.6.2 2.2.1.7-.1 2.1-.9 2.4-1.7.3-.8.3-1.5.2-1.7-.1-.1-.3-.2-.7-.4z" />
-                </svg>
-              </span>
-              {product.askLabel}
-            </a>
+            {/* Purchase card (left) */}
+            <div data-id="buy-column" style={{ flex: "1 1 380px", minWidth: 320, order: 2 }}>
+              <BuyPanel
+                options={product.options}
+                buyLabel={product.buyLabel}
+                delivery={product.delivery}
+                trustTitle={product.trustTitle}
+                trustPoints={product.trustPoints}
+                askLabel={product.askLabel}
+                showTrustBadges
+              />
+            </div>
           </div>
-        </div>
 
-        {/* ===== DESCRIPTION SECTION ===== */}
-        <div data-id="description-section" style={{ marginTop: 64 }}>
-          <h2
-            data-id="description-title"
-            style={{
-              margin: 0,
-              fontSize: 25,
-              fontWeight: 700,
-              color: ACCENT,
-              textAlign: "right",
-              borderBottom: "1px solid #e2e2e2",
-              paddingBottom: 10,
-              position: "relative",
-            }}
-          >
-            {product.descTitle}
-            <span
-              data-id="description-title-underline"
+          {/* ===== DESCRIPTION ===== */}
+          <div data-id="description-section" style={{ marginTop: 64 }}>
+            <h2
+              data-id="description-title"
               style={{
-                position: "absolute",
-                bottom: -1,
-                right: 0,
-                width: 150,
-                height: 3,
-                background: ACCENT,
-              }}
-            />
-          </h2>
-
-          <div data-id="description-body-row" style={{ display: "flex", gap: 48, alignItems: "flex-start", flexWrap: "wrap", marginTop: 24 }}>
-            <div
-              data-id="description-text-column"
-              style={{
-                flex: "1 1 540px",
-                minWidth: 320,
-                fontSize: 15,
-                lineHeight: 1.95,
-                color: "#4a4a4a",
+                margin: 0,
+                fontSize: 25,
+                fontWeight: 800,
+                color: "#2f2f2f",
                 textAlign: "right",
+                paddingBottom: 10,
+                position: "relative",
               }}
             >
-              {product.descParas.map((para, i) => (
-                <p key={i} data-id={`desc-para-${i}`} style={{ margin: "0 0 18px", whiteSpace: "pre-line" }}>
-                  {para}
-                </p>
-              ))}
-              <ProductDims />
-            </div>
+              {product.descTitle}
+              <span
+                data-id="description-title-line"
+                style={{ position: "absolute", bottom: 0, right: 0, width: "50%", height: 1, background: "#e2e2e2" }}
+              />
+              <span
+                data-id="description-title-underline"
+                style={{ position: "absolute", bottom: -1, right: 0, width: 150, height: 3, background: ACCENT, borderRadius: 2 }}
+              />
+            </h2>
 
-            {/* Interactive 3D shed + garden (CAD embed) */}
-            <div data-id="product-3d-column" style={{ flex: "0 1 450px", minWidth: 300 }}>
-              <Product3D />
-              <a
-                data-id="phone-link"
-                href={TEL_URL}
-                dir="ltr"
-                style={{
-                  display: "block",
-                  textAlign: "center",
-                  marginTop: 10,
-                  fontSize: 18,
-                  fontWeight: 800,
-                  color: "#2f2f2f",
-                  textDecoration: "none",
-                }}
+            <div
+              data-id="description-body-row"
+              style={{ display: "flex", gap: 44, alignItems: "flex-start", flexWrap: "wrap", marginTop: 24 }}
+            >
+              <div
+                data-id="description-text-column"
+                style={{ flex: "1 1 520px", minWidth: 300, fontSize: 16, lineHeight: 1.95, color: "#4a4a4a", textAlign: "right" }}
               >
-                ☎ {product.phone}
-              </a>
+                {product.descParas.map((para, i) => (
+                  <p key={i} data-id={`desc-para-${i}`} style={{ margin: "0 0 18px", whiteSpace: "pre-line" }}>
+                    {para}
+                  </p>
+                ))}
+                <ProductDims />
+              </div>
+
+              {/* Interactive 3D shed planner (CAD embed) */}
+              <div data-id="product-3d-column" className="product-3d-column" style={{ flex: "0 1 460px", minWidth: 300 }}>
+                <Product3D />
+              </div>
             </div>
           </div>
-        </div>
-       </SizeProvider>
+        </SizeProvider>
+
+        <SiteFooter />
       </div>
     </div>
   );
