@@ -69,7 +69,7 @@ export default function Product3D() {
       style={{
         display: "block",
         marginTop: 12,
-        textAlign: "center",
+        textAlign: "left",
         color: "#2f8fd6",
         fontSize: 15,
         fontWeight: 600,
