@@ -18,6 +18,14 @@ type Group = { label: string; choices: Choice[] };
 const ils = (n: number) => `₪ ${n.toLocaleString("he-IL")}`;
 const ACCENT = "#2f8fd6";
 
+/** Mirror of the server-side Israeli-mobile check so we fail fast before POSTing. */
+const normalizePhone = (raw: string) => {
+  let d = raw.replace(/\D/g, "");
+  if (d.startsWith("972")) d = "0" + d.slice(3);
+  return d;
+};
+const isValidMobile = (raw: string) => /^05\d{8}$/.test(normalizePhone(raw));
+
 const selectStyle: CSSProperties = {
   width: "100%",
   height: 42,
@@ -114,8 +122,10 @@ function Chevron() {
  * button, delivery note, trust points/badges and an "ask on WhatsApp" link —
  * all in one bordered card (per the imported design). A size selector drives
  * the base price and reactive title; delivery/floor dropdowns add surcharges;
- * the total updates live. "קנה עכשיו" opens an order-request modal that POSTs
- * to /api/orders (a lead, not a payment). Selected size is shared via
+ * the total updates live. "קנה עכשיו" opens a checkout modal (name + mobile +
+ * optional email) that POSTs to /api/checkout, which opens a Grow/Meshulam
+ * payment process and returns its hosted-page URL; the browser is redirected
+ * there to pay (card / Bit / Apple-Google Pay). Selected size is shared via
  * SizeProvider so the description's dimensions block stays in sync.
  */
 export default function BuyPanel({
@@ -144,9 +154,9 @@ export default function BuyPanel({
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
+  const [email, setEmail] = useState("");
   const [notes, setNotes] = useState("");
   const [submitting, setSubmitting] = useState(false);
-  const [orderId, setOrderId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const chosen = useMemo(
@@ -164,27 +174,34 @@ export default function BuyPanel({
 
   function closeModal() {
     setOpen(false);
-    window.setTimeout(() => {
-      setOrderId(null);
-      setError(null);
-    }, 200);
+    window.setTimeout(() => setError(null), 200);
   }
 
-  async function submitOrder(e: FormEvent) {
+  /**
+   * Open a Grow payment process server-side and hand the browser its hosted
+   * checkout URL (Bit / card / Apple-Google Pay). The actual "paid" confirmation
+   * arrives at our webhook; the buyer lands on /checkout/success after paying.
+   */
+  async function startCheckout(e: FormEvent) {
     e.preventDefault();
     setError(null);
-    if (!name.trim() || !phone.trim()) {
-      setError("נא למלא שם וטלפון");
+    if (name.trim().split(/\s+/).filter(Boolean).length < 2) {
+      setError("נא למלא שם פרטי ושם משפחה");
+      return;
+    }
+    if (!isValidMobile(phone)) {
+      setError("נא למלא מספר טלפון נייד תקין (למשל 0501234567)");
       return;
     }
     setSubmitting(true);
     try {
-      const res = await fetch("/api/orders", {
+      const res = await fetch("/api/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           name,
           phone,
+          email,
           notes,
           title,
           totalIls: newTotal,
@@ -199,11 +216,11 @@ export default function BuyPanel({
         }),
       });
       const data = await res.json();
-      if (!res.ok || !data.ok) throw new Error(data.error || "failed");
-      setOrderId(data.orderId as string);
+      if (!res.ok || !data.ok || !data.redirectUrl) throw new Error(data.error || "failed");
+      // Navigate to Grow's hosted payment page (no return on success).
+      window.location.assign(data.redirectUrl as string);
     } catch {
-      setError("אירעה שגיאה. נסו שוב או חייגו אלינו.");
-    } finally {
+      setError("אירעה שגיאה בפתיחת התשלום. נסו שוב או חייגו אלינו.");
       setSubmitting(false);
     }
   }
@@ -408,55 +425,7 @@ export default function BuyPanel({
               overflowY: "auto",
             }}
           >
-            {orderId ? (
-              <div data-id="order-success" style={{ textAlign: "center" }}>
-                <div
-                  data-id="order-success-icon"
-                  style={{
-                    width: 56,
-                    height: 56,
-                    borderRadius: "50%",
-                    background: "#e6f1fb",
-                    color: ACCENT,
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    margin: "0 auto 14px",
-                    fontSize: 30,
-                  }}
-                >
-                  ✓
-                </div>
-                <h3 data-id="order-success-title" style={{ margin: "0 0 8px", fontSize: 21, fontWeight: 800, color: "#2f2f2f" }}>
-                  הבקשה התקבלה!
-                </h3>
-                <p data-id="order-success-text" style={{ margin: "0 0 6px", fontSize: 14, color: "#555", lineHeight: 1.6 }}>
-                  תודה, נחזור אליכם בהקדם לאישור ההזמנה ותיאום אספקה.
-                </p>
-                <p data-id="order-success-id" style={{ margin: "0 0 18px", fontSize: 12, color: "#999" }} dir="ltr">
-                  מספר בקשה: {orderId}
-                </p>
-                <button
-                  data-id="order-success-close"
-                  type="button"
-                  onClick={closeModal}
-                  style={{
-                    background: ACCENT,
-                    color: "#fff",
-                    border: "none",
-                    borderRadius: 7,
-                    padding: "11px 30px",
-                    fontSize: 15,
-                    fontWeight: 700,
-                    cursor: "pointer",
-                    fontFamily: "inherit",
-                  }}
-                >
-                  סגירה
-                </button>
-              </div>
-            ) : (
-              <>
+            <>
                 <h3 data-id="order-form-title" style={{ margin: "0 0 14px", fontSize: 19, fontWeight: 800, color: ACCENT }}>
                   {title}
                 </h3>
@@ -495,7 +464,7 @@ export default function BuyPanel({
                   </div>
                 </div>
 
-                <form data-id="order-form" onSubmit={submitOrder}>
+                <form data-id="order-form" onSubmit={startCheckout}>
                   <input
                     data-id="order-name"
                     value={name}
@@ -509,10 +478,20 @@ export default function BuyPanel({
                     data-id="order-phone"
                     value={phone}
                     onChange={(e) => setPhone(e.target.value)}
-                    placeholder="טלפון *"
-                    aria-label="טלפון"
+                    placeholder="טלפון נייד *"
+                    aria-label="טלפון נייד"
                     aria-required="true"
                     inputMode="tel"
+                    style={inputStyle}
+                  />
+                  <input
+                    data-id="order-email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="אימייל (לקבלה)"
+                    aria-label="אימייל"
+                    inputMode="email"
+                    type="email"
                     style={inputStyle}
                   />
                   <textarea
@@ -528,7 +507,7 @@ export default function BuyPanel({
                     <p data-id="order-error" style={{ color: "#c0392b", fontSize: 13, margin: "0 0 10px" }}>{error}</p>
                   )}
                   <p data-id="order-disclaimer" style={{ fontSize: 12, color: "#999", margin: "0 0 14px", lineHeight: 1.5 }}>
-                    זו בקשת הזמנה ואינה חיוב. לא נשמרים פרטי אשראי — נתאם איתכם תשלום ישירות.
+                    התשלום מתבצע בעמוד מאובטח של חברת הסליקה Grow — אשראי, Bit או Apple/Google&nbsp;Pay. פרטי האשראי אינם נשמרים אצלנו.
                   </p>
                   <div data-id="order-actions" style={{ display: "flex", gap: 10 }}>
                     <button
@@ -549,7 +528,7 @@ export default function BuyPanel({
                         fontFamily: "inherit",
                       }}
                     >
-                      {submitting ? "שולח…" : "שליחת בקשה"}
+                      {submitting ? "מעביר לתשלום…" : `מעבר לתשלום מאובטח · ${ils(newTotal)}`}
                     </button>
                     <button
                       data-id="order-cancel"
@@ -570,8 +549,7 @@ export default function BuyPanel({
                     </button>
                   </div>
                 </form>
-              </>
-            )}
+            </>
           </div>
         </div>
       )}
