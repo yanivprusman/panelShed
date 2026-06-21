@@ -14,24 +14,6 @@ export function WhatsAppIcon({ size = 20 }: { size?: number }) {
   );
 }
 
-/**
- * Brand logo: a panel shed whose roofline is a soft double-hump with a center
- * valley — it reads as a curvy-roofed shed built from vertical panels, while
- * quietly winking at the "פאנל שד" pun. Renders white on the blue badge.
- */
-export function ShedIcon({ size = 20 }: { size?: number }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 32 32" fill="#fff" aria-hidden="true">
-      {/* Curvy double-hump roof (the wink) */}
-      <path d="M4 16C4 9 8.5 5.5 12 5.5C14.8 5.5 15.2 9.5 16 11.5C16.8 9.5 17.2 5.5 20 5.5C23.5 5.5 28 9 28 16Z" />
-      {/* Vertical panel slats forming the shed body */}
-      <rect x="7" y="16" width="5.2" height="11" rx="1" />
-      <rect x="13.4" y="16" width="5.2" height="11" rx="1" />
-      <rect x="19.8" y="16" width="5.2" height="11" rx="1" />
-    </svg>
-  );
-}
-
 export function PhoneIcon({ size = 17 }: { size?: number }) {
   return (
     <svg
