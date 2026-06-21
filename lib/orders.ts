@@ -59,6 +59,12 @@ async function writeOrders(orders: Order[]): Promise<void> {
   await fs.rename(tmp, ORDERS_FILE);
 }
 
+/** All orders, newest first (for the admin view). */
+export async function listOrders(): Promise<Order[]> {
+  const orders = await readOrders();
+  return orders.slice().reverse();
+}
+
 export async function appendOrder(order: Order): Promise<void> {
   const orders = await readOrders();
   orders.push(order);

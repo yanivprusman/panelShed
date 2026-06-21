@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { findOrder, updateOrder } from "@/lib/orders";
+import { notifyOwnerPaid } from "@/lib/notify";
 import {
   meshulamConfig,
   approveTransaction,
@@ -74,7 +75,7 @@ export async function POST(request: Request) {
     }
 
     if (order.paymentStatus !== "paid") {
-      await updateOrder(orderId, {
+      const updated = await updateOrder(orderId, {
         paymentStatus: "paid",
         paidSum: sum,
         paidAt: new Date().toISOString(),
@@ -85,6 +86,8 @@ export async function POST(request: Request) {
         email: order.email || get("data[payerEmail]"),
       });
       console.log(`[checkout/callback] order ${orderId} PAID ₪${sum}`);
+      // Notify the owner (best-effort; never blocks/fails the paid confirmation).
+      if (updated) await notifyOwnerPaid(updated);
     }
 
     // Acknowledge to Grow (required after each success). Best-effort: an ack
