@@ -8,7 +8,7 @@ import {
   type ReactNode,
 } from "react";
 import { useSize } from "./size-context";
-import { SIZES, productTitle } from "./sizes";
+import { SIZES, productTitle, floorPriceFor } from "./sizes";
 import { whatsappUrl } from "./contact";
 import { WhatsAppIcon, CheckIcon } from "./icons";
 
@@ -160,9 +160,9 @@ export default function BuyPanel({
   const [error, setError] = useState<string | null>(null);
 
   // Some add-ons (the pine-deck floor) are priced by footprint, not flat — their
-  // choice carries priceFromSize and the real price comes from the chosen size.
+  // choice carries priceFromSize and the real price is derived from the size.
   const effPrice = (c: Choice): number | null =>
-    c.priceFromSize === "floor" ? size.floorPrice : c.price;
+    c.priceFromSize === "floor" ? floorPriceFor(size) : c.price;
 
   const chosen = useMemo(
     () => options.map((g, i) => g.choices[sel[i]] ?? g.choices[0]),
