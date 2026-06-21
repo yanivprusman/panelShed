@@ -5,7 +5,7 @@ import {
   TEL_URL,
   PHONE_DISPLAY,
 } from "./contact";
-import { WhatsAppIcon, PhoneIcon } from "./icons";
+import { WhatsAppIcon, PhoneIcon, PanelShedMark } from "./icons";
 
 /**
  * Top brand bar: logo badge + name + slogan on the right (RTL start), and the
@@ -34,15 +34,12 @@ export default function SiteHeader() {
             height: 32,
             borderRadius: 8,
             background: "#2f8fd6",
-            color: "#fff",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            fontWeight: 800,
-            fontSize: 16,
           }}
         >
-          פ
+          <PanelShedMark size={22} />
         </span>
         <span
           data-id="header-brand-name"

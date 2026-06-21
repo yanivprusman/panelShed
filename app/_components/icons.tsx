@@ -5,6 +5,34 @@ import type { CSSProperties } from "react";
  * are presentational (no state/hooks), so they render in both server and
  * client components.
  */
+
+/**
+ * Brand mark: a shed whose "chimney" is a perfume atomizer spraying mist —
+ * a visual pun on the name פאנל-שד ≈ פאנל בושם ("panel perfume"). White fills
+ * with seam lines in the surrounding badge colour, so it drops straight into
+ * the blue header badge (and mirrors app/icon.svg, the favicon). The wall's
+ * horizontal seams nod to the insulated *panel* the product is made of.
+ */
+export function PanelShedMark({ size = 22, seam = "#2f8fd6" }: { size?: number; seam?: string }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 48 48" fill="none" aria-hidden="true">
+      <g fill="#ffffff" opacity="0.92">
+        <circle cx="31" cy="5.6" r="1.7" />
+        <circle cx="34.6" cy="3.4" r="1.2" />
+        <circle cx="32.5" cy="1.9" r="0.95" />
+        <circle cx="29" cy="2.9" r="1.1" />
+      </g>
+      <rect x="20" y="4" width="8" height="4.6" rx="2.1" fill="#ffffff" />
+      <rect x="21.5" y="8" width="5" height="5.2" fill="#ffffff" />
+      <polygon points="7,26 24,12 41,26" fill="#ffffff" />
+      <rect x="12" y="26" width="24" height="14" rx="1.8" fill="#ffffff" />
+      <g stroke={seam} strokeWidth="1.7" strokeLinecap="round">
+        <line x1="13" y1="31" x2="35" y2="31" />
+        <line x1="13" y1="35.4" x2="35" y2="35.4" />
+      </g>
+    </svg>
+  );
+}
 export function WhatsAppIcon({ size = 20 }: { size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 32 32" fill="#25D366" aria-hidden="true">
