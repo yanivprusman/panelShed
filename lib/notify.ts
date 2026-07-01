@@ -1,10 +1,13 @@
 import "server-only";
 import { sendDaemonCommand } from "@/lib/daemon";
-import { EMAIL } from "@/app/_components/contact";
+import { EMAIL, PHONE_DISPLAY } from "@/app/_components/contact";
 import type { Order } from "@/lib/orders";
 
 const ils = (n: number | null | undefined) =>
   typeof n === "number" ? `${n.toLocaleString("he-IL")} ש"ח` : "—";
+
+/** Owner WhatsApp recipient in bridge format (E.164 digits, no +): 055… → 972…. */
+const OWNER_WHATSAPP = "972" + PHONE_DISPLAY.replace(/\D/g, "").replace(/^0/, "");
 
 /**
  * Build a full UTF-8 MIME message. Subject + body are base64-encoded inside the
@@ -52,26 +55,70 @@ function orderEmailBody(order: Order): string {
     .join("\n");
 }
 
+function orderWhatsAppBody(order: Order): string {
+  return [
+    `🎉 התקבל תשלום חדש באתר פאנל-שד`,
+    `מוצר: ${order.title}`,
+    `סכום: ${ils(order.paidSum ?? order.totalIls)}`,
+    `לקוח: ${order.name}`,
+    `טלפון: ${order.phone}`,
+    order.email ? `אימייל: ${order.email}` : ``,
+    order.notes ? `הערות: ${order.notes}` : ``,
+    `מספר הזמנה: ${order.id}`,
+  ]
+    .filter((l) => l !== ``)
+    .join("\n");
+}
+
+/** Email the owner via the daemon → NUC msmtp (Brevo). */
+async function emailOwnerPaid(order: Order): Promise<void> {
+  const subject = `הזמנה חדשה ${ils(order.paidSum ?? order.totalIls)} — ${order.title}`;
+  const mime = buildMime(EMAIL, subject, orderEmailBody(order));
+  const transport = Buffer.from(mime, "utf8").toString("base64");
+  const shellCmd = `printf %s '${transport}' | base64 -d | msmtp -t`;
+  await sendDaemonCommand({
+    command: "execOnPeer",
+    peer: "leader",
+    directory: "/root",
+    shellCmd,
+  });
+  console.log(`[notify] owner emailed for paid order ${order.id}`);
+}
+
 /**
- * Notify the owner of a paid order by email, via the daemon → NUC msmtp (Brevo).
- * Best-effort: any failure is logged and swallowed — a notification problem must
- * never undo or fail the payment confirmation.
+ * WhatsApp the owner via the NUC bot bridge (whatsapp-bridge-bot on
+ * 127.0.0.1:8081, POST /api/send). Runs ON the leader via execOnPeer, mirroring
+ * the email path. The {recipient,message} JSON is base64-transported and decoded
+ * on the NUC, so customer-controlled text (name/notes) never touches a shell.
+ */
+async function whatsappOwnerPaid(order: Order): Promise<void> {
+  const payload = JSON.stringify({
+    recipient: OWNER_WHATSAPP,
+    message: orderWhatsAppBody(order),
+  });
+  const b64 = Buffer.from(payload, "utf8").toString("base64");
+  const shellCmd = `printf %s '${b64}' | base64 -d | curl -sS -X POST http://127.0.0.1:8081/api/send -H 'Content-Type: application/json' --data-binary @-`;
+  await sendDaemonCommand({
+    command: "execOnPeer",
+    peer: "leader",
+    directory: "/root",
+    shellCmd,
+  });
+  console.log(`[notify] owner WhatsApp'd for paid order ${order.id}`);
+}
+
+/**
+ * Notify the owner of a paid order by email AND WhatsApp. Both are best-effort
+ * and independent — a notification failure must never undo or fail the payment
+ * confirmation (Grow will re-send the callback anyway).
  */
 export async function notifyOwnerPaid(order: Order): Promise<void> {
-  try {
-    const to = EMAIL;
-    const subject = `הזמנה חדשה ${ils(order.paidSum ?? order.totalIls)} — ${order.title}`;
-    const mime = buildMime(to, subject, orderEmailBody(order));
-    const transport = Buffer.from(mime, "utf8").toString("base64");
-    const shellCmd = `printf %s '${transport}' | base64 -d | msmtp -t`;
-    await sendDaemonCommand({
-      command: "execOnPeer",
-      peer: "leader",
-      directory: "/root",
-      shellCmd,
-    });
-    console.log(`[notify] owner emailed for paid order ${order.id}`);
-  } catch (e) {
-    console.error(`[notify] failed to email owner for order ${order.id}`, e);
-  }
+  const [email, whatsapp] = await Promise.allSettled([
+    emailOwnerPaid(order),
+    whatsappOwnerPaid(order),
+  ]);
+  if (email.status === "rejected")
+    console.error(`[notify] email failed for order ${order.id}`, email.reason);
+  if (whatsapp.status === "rejected")
+    console.error(`[notify] whatsapp failed for order ${order.id}`, whatsapp.reason);
 }

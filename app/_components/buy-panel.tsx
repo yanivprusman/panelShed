@@ -159,7 +159,7 @@ export default function BuyPanel({
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
   const [notes, setNotes] = useState("");
-  const [submitted, setSubmitted] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // Some add-ons (the pine-deck floor) are priced by footprint, not flat — their
@@ -176,37 +176,13 @@ export default function BuyPanel({
 
   const askWhatsappUrl = whatsappUrl("שלום, אשמח לקבל פרטים על " + title);
 
-  // The full order, formatted for the WhatsApp handoff: every detail the buyer
-  // entered (size, add-ons, live total, name, phone, optional email + notes) so
-  // the chat opens pre-filled and nothing has to be re-typed.
-  const orderWhatsappUrl = whatsappUrl(
-    [
-      "שלום, אשמח להזמין דרך האתר:",
-      "",
-      title,
-      `גודל: ${size.label} מטר — ${ils(base)}`,
-      ...chosen
-        .map((c) => {
-          const p = effPrice(c);
-          return p != null ? `${c.label} — ${ils(p)}` : null;
-        })
-        .filter(Boolean),
-      `סה"כ: ${ils(newTotal)}`,
-      "",
-      `שם: ${name.trim()}`,
-      `טלפון: ${phone.trim()}`,
-      ...(email.trim() ? [`אימייל: ${email.trim()}`] : []),
-      ...(notes.trim() ? [`הערות: ${notes.trim()}`] : []),
-    ].join("\n"),
-  );
-
   function setChoice(groupIdx: number, choiceIdx: number) {
     setSel((prev) => prev.map((v, i) => (i === groupIdx ? choiceIdx : v)));
   }
 
   function closeModal() {
     setOpen(false);
-    setSubmitted(false);
+    setLoading(false);
     window.setTimeout(() => setError(null), 200);
   }
 
@@ -216,7 +192,7 @@ export default function BuyPanel({
    * details, then switches to a confirmation view that hands the full order off
    * to WhatsApp — collection happens only after the job is completed.
    */
-  function submitOrder(e: FormEvent) {
+  async function submitOrder(e: FormEvent) {
     e.preventDefault();
     setError(null);
     if (name.trim().split(/\s+/).filter(Boolean).length < 2) {
@@ -227,10 +203,54 @@ export default function BuyPanel({
       setError("נא למלא מספר טלפון נייד תקין (למשל 0501234567)");
       return;
     }
-    setSubmitted(true);
-    // Valid name + Israeli mobile entered = a real lead. Report it to Google Ads
-    // (no-op unless NEXT_PUBLIC_GADS_LEAD_LABEL is configured), weighted by cart.
+    // Starting checkout = a strong lead signal for Google Ads (no-op unless
+    // NEXT_PUBLIC_GADS_LEAD_LABEL is set), weighted by the cart total.
     reportLead({ value: newTotal });
+
+    // Create the order + Grow payment process server-side, then hand the browser
+    // off to Grow's hosted secure payment page. No fallback: if payments aren't
+    // configured or the gateway errors, surface a clear message.
+    setLoading(true);
+    try {
+      const orderOptions = [
+        { label: "גודל", choice: `${size.label} מטר`, price: base },
+        ...chosen.flatMap((c) => {
+          const p = effPrice(c);
+          return p != null ? [{ label: "תוספת", choice: c.label, price: p }] : [];
+        }),
+      ];
+      const res = await fetch("/api/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: name.trim(),
+          phone: phone.trim(),
+          email: email.trim(),
+          notes: notes.trim(),
+          title,
+          totalIls: newTotal,
+          options: orderOptions,
+        }),
+      });
+      const data = (await res.json()) as {
+        ok?: boolean;
+        redirectUrl?: string;
+        error?: string;
+      };
+      if (data.ok && data.redirectUrl) {
+        window.location.href = data.redirectUrl; // off to Grow
+        return;
+      }
+      setLoading(false);
+      setError(
+        data.error === "payments_not_configured"
+          ? "התשלום אינו זמין כרגע. נסו שוב מאוחר יותר או פנו אלינו בוואטסאפ."
+          : "אירעה שגיאה בתהליך התשלום. נסו שוב או פנו אלינו בוואטסאפ.",
+      );
+    } catch {
+      setLoading(false);
+      setError("אירעה שגיאה בחיבור. נסו שוב או פנו אלינו בוואטסאפ.");
+    }
   }
 
   return (
@@ -477,79 +497,7 @@ export default function BuyPanel({
                   </div>
                 </div>
 
-                {submitted ? (
-                  <div data-id="order-handoff">
-                    <div
-                      data-id="order-handoff-note"
-                      style={{
-                        background: "#f5faff",
-                        border: `1px solid ${ACCENT}33`,
-                        borderRadius: 8,
-                        padding: "14px 16px",
-                        marginBottom: 16,
-                        fontSize: 14,
-                        color: "#3a3a3a",
-                        lineHeight: 1.7,
-                      }}
-                    >
-                      <p data-id="order-handoff-note-1" style={{ margin: "0 0 8px" }}>
-                        האתר נמצא כעת בהקמה ותשלום אונליין עדיין אינו זמין. אין צורך לשלם
-                        עכשיו — התשלום נגבה רק בסיום העבודה.
-                      </p>
-                      <p data-id="order-handoff-note-2" style={{ margin: 0 }}>
-                        כדי להשלים את ההזמנה, שלחו לנו את הפרטים בוואטסאפ ונחזור אליכם
-                        בהקדם.
-                      </p>
-                    </div>
-                    <div data-id="order-handoff-actions" style={{ display: "flex", gap: 10 }}>
-                      <a
-                        data-id="order-whatsapp-send"
-                        href={orderWhatsappUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        style={{
-                          flex: 1,
-                          display: "inline-flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          gap: 8,
-                          background: "#25D366",
-                          color: "#fff",
-                          border: "none",
-                          borderRadius: 7,
-                          padding: 12,
-                          fontSize: 16,
-                          fontWeight: 700,
-                          textDecoration: "none",
-                          fontFamily: "inherit",
-                        }}
-                      >
-                        <span data-id="order-whatsapp-icon" style={{ filter: "brightness(0) invert(1)" }}>
-                          <WhatsAppIcon size={20} />
-                        </span>
-                        שליחת ההזמנה בוואטסאפ
-                      </a>
-                      <button
-                        data-id="order-handoff-close"
-                        type="button"
-                        onClick={closeModal}
-                        style={{
-                          background: "#f1f1f1",
-                          color: "#555",
-                          border: "1px solid #ddd",
-                          borderRadius: 7,
-                          padding: "12px 18px",
-                          fontSize: 15,
-                          cursor: "pointer",
-                          fontFamily: "inherit",
-                        }}
-                      >
-                        סגירה
-                      </button>
-                    </div>
-                  </div>
-                ) : (
-                  <form data-id="order-form" onSubmit={submitOrder}>
+                <form data-id="order-form" onSubmit={submitOrder}>
                     <input
                       data-id="order-name"
                       value={name}
@@ -592,12 +540,13 @@ export default function BuyPanel({
                       <p data-id="order-error" style={{ color: "#c0392b", fontSize: 13, margin: "0 0 10px" }}>{error}</p>
                     )}
                     <p data-id="order-disclaimer" style={{ fontSize: 12, color: "#999", margin: "0 0 14px", lineHeight: 1.5 }}>
-                      האתר בהקמה ותשלום אונליין אינו זמין כעת — מלאו פרטים ונמשיך את ההזמנה בוואטסאפ. אין צורך בתשלום באתר.
+                      התשלום מאובטח ומתבצע דרך Grow — כרטיס אשראי, ביט או Apple/Google&nbsp;Pay.
                     </p>
                     <div data-id="order-actions" style={{ display: "flex", gap: 10 }}>
                       <button
                         type="submit"
                         data-id="order-submit"
+                        disabled={loading}
                         style={{
                           flex: 1,
                           background: ACCENT,
@@ -607,11 +556,12 @@ export default function BuyPanel({
                           padding: 12,
                           fontSize: 16,
                           fontWeight: 700,
-                          cursor: "pointer",
+                          cursor: loading ? "not-allowed" : "pointer",
+                          opacity: loading ? 0.7 : 1,
                           fontFamily: "inherit",
                         }}
                       >
-                        {`המשך · ${ils(newTotal)}`}
+                        {loading ? "מעביר לתשלום מאובטח…" : `לתשלום · ${ils(newTotal)}`}
                       </button>
                       <button
                         data-id="order-cancel"
@@ -632,7 +582,6 @@ export default function BuyPanel({
                       </button>
                     </div>
                   </form>
-                )}
             </>
           </div>
         </div>
