@@ -98,3 +98,32 @@ textarea:focus-visible,
     margin-top: 0;
   }
 }
+
+/* ── FAQ accordion (native <details>) ─────────────────────────────────────
+   Hover/open affordances can't be expressed inline, so they live here. */
+
+.faq-item {
+  border-bottom: 1px solid #e8e8e8;
+  padding: 4px 0;
+}
+
+.faq-question {
+  cursor: pointer;
+  list-style-position: inside;
+  padding: 14px 4px;
+  font-size: 17px;
+  font-weight: 600;
+  color: #2f2f2f;
+  text-align: right;
+  border-radius: 6px;
+  transition: color 120ms ease, background 120ms ease;
+}
+
+.faq-question:hover {
+  color: #2f8fd6;
+  background: #f7fbfe;
+}
+
+.faq-item[open] .faq-question {
+  color: #2f8fd6;
+}

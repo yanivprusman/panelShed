@@ -10,6 +10,7 @@ import { SizeProvider } from "./_components/size-context";
 import { SITE_URL, SITE_NAME } from "@/lib/site";
 import { SIZES } from "./_components/sizes";
 import { BRAND, PHONE_DISPLAY, EMAIL } from "./_components/contact";
+import FaqSection, { FAQ_ITEMS } from "./_components/faq";
 
 const galleryImages = [
   "/products/lehamhasha.png",
@@ -62,6 +63,14 @@ const jsonLd = {
       telephone: `+972${PHONE_DISPLAY.replace(/\D/g, "").replace(/^0/, "")}`,
       areaServed: "IL",
       logo: `${SITE_URL}/icon.svg`,
+    },
+    {
+      "@type": "FAQPage",
+      mainEntity: FAQ_ITEMS.map((item) => ({
+        "@type": "Question",
+        name: item.q,
+        acceptedAnswer: { "@type": "Answer", text: item.a },
+      })),
     },
   ],
 };
@@ -202,6 +211,9 @@ export default function Home() {
               </div>
             </div>
           </div>
+
+          {/* ===== FAQ ===== */}
+          <FaqSection />
           </main>
         </SizeProvider>
 
