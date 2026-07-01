@@ -11,6 +11,7 @@ import { useSize } from "./size-context";
 import { SIZES, productTitle, floorPriceFor } from "./sizes";
 import { whatsappUrl } from "./contact";
 import { WhatsAppIcon, CheckIcon } from "./icons";
+import { reportLead } from "@/lib/gtag";
 
 type Choice = { label: string; price: number | null; priceFromSize?: "floor" };
 type Group = { label: string; choices: Choice[] };
@@ -227,6 +228,9 @@ export default function BuyPanel({
       return;
     }
     setSubmitted(true);
+    // Valid name + Israeli mobile entered = a real lead. Report it to Google Ads
+    // (no-op unless NEXT_PUBLIC_GADS_LEAD_LABEL is configured), weighted by cart.
+    reportLead({ value: newTotal });
   }
 
   return (

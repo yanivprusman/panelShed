@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
+import { reportPurchase } from "@/lib/gtag";
 
 const ACCENT = "#2f8fd6";
 const ils = (n: number) => `₪ ${n.toLocaleString("he-IL")}`;
@@ -24,6 +25,16 @@ export default function SuccessClient() {
   const orderId = useSearchParams().get("order") ?? "";
   const [status, setStatus] = useState<Status | null>(null);
   const [timedOut, setTimedOut] = useState(false);
+  const conversionSent = useRef(false);
+
+  // Fire the Google Ads Purchase conversion exactly once, when Grow's webhook
+  // has flipped the order to `paid`. transaction_id (orderId) dedupes reloads.
+  useEffect(() => {
+    if (status?.paymentStatus === "paid" && !conversionSent.current) {
+      conversionSent.current = true;
+      reportPurchase({ orderId, value: status.totalIls });
+    }
+  }, [status?.paymentStatus, status?.totalIls, orderId]);
 
   useEffect(() => {
     if (!orderId) return;

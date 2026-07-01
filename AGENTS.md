@@ -29,3 +29,21 @@ Get sandbox identifiers from the Grow dashboard; go `live` only after Grow's pro
 
 Grow's `successUrl`/`notifyUrl` must be public HTTPS (not localhost) — they go through the nginx
 host `panelshed.{dev,prod}.ya-niv.com`, derived from the request's `x-forwarded-*` headers.
+
+# Google Ads conversion tracking
+
+`lib/gtag.ts` + `app/_components/google-ads-tag.tsx` wire Google Ads conversions. The global tag
+(`GoogleAdsTag`, rendered in `app/layout.tsx`) only loads when `NEXT_PUBLIC_GOOGLE_ADS_ID` is set —
+blank = no tag, and the `report*` helpers are no-ops, so nothing degrades before the account exists.
+
+Two conversion actions, each gated by its own label:
+- **Purchase** — fired once from `app/checkout/success/success-client.tsx` when Grow's webhook flips
+  the order to `paid`; sends `value` (ILS total) + `transaction_id` (orderId, dedupes reloads).
+- **Lead** — fired from `app/_components/buy-panel.tsx` when a buyer submits valid name + Israeli
+  mobile. This is the live conversion today, while the buy flow hands off to WhatsApp; `value` is the
+  configured cart total. Once the Grow checkout is switched on, Purchase becomes the primary signal.
+
+Env (`.env.local`, gitignored; all `NEXT_PUBLIC_*` — the id/labels are not secret): create the
+actions in Google Ads → Tools → Conversions, then set `NEXT_PUBLIC_GOOGLE_ADS_ID` (`AW-…`),
+`NEXT_PUBLIC_GADS_PURCHASE_LABEL`, `NEXT_PUBLIC_GADS_LEAD_LABEL` (the label is the part after the
+slash in the action's `send_to`).
