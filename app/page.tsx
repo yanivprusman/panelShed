@@ -7,6 +7,9 @@ import ProductDims from "./_components/product-dims";
 import SiteHeader from "./_components/site-header";
 import SiteFooter from "./_components/site-footer";
 import { SizeProvider } from "./_components/size-context";
+import { SITE_URL, SITE_NAME } from "@/lib/site";
+import { SIZES } from "./_components/sizes";
+import { BRAND, PHONE_DISPLAY, EMAIL } from "./_components/contact";
 
 const galleryImages = [
   "/products/lehamhasha.png",
@@ -20,9 +23,47 @@ const assistant = Assistant({
 });
 
 export const metadata: Metadata = {
-  title: "מחסן גינה פאנל מבודד 2x2 מטר",
+  title: "מחסן גינה פאנל מבודד 2x2 מטר | פאנל-שד",
   description:
     "מחסן גינה מפאנל מבודד בעובי 5 ס\"מ — חסין לפגעי מזג אוויר, בידוד וגימור ברמה גבוהה, מיוצר בארץ.",
+  alternates: { canonical: "/" },
+};
+
+// Structured data (schema.org) so Google can show rich results: the shed as a
+// Product with an aggregate offer (cheapest size upward), plus the business.
+const lowestPrice = Math.min(...SIZES.map((s) => s.price));
+const jsonLd = {
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "Product",
+      name: "מחסן גינה פאנל מבודד",
+      image: [
+        `${SITE_URL}/products/panel-shed-render.png`,
+        `${SITE_URL}/products/lehamhasha.png`,
+      ],
+      description:
+        'מחסן גינה מפאנל מבודד בעובי 5 ס"מ — חסין לפגעי מזג אוויר, בידוד וגימור ברמה גבוהה, מיוצר בישראל. משמש כמחסן, משרד, חדר עבודה ועוד.',
+      brand: { "@type": "Brand", name: BRAND },
+      offers: {
+        "@type": "AggregateOffer",
+        priceCurrency: "ILS",
+        lowPrice: lowestPrice,
+        offerCount: SIZES.length,
+        availability: "https://schema.org/InStock",
+        url: SITE_URL,
+      },
+    },
+    {
+      "@type": "Organization",
+      name: SITE_NAME,
+      url: SITE_URL,
+      email: EMAIL,
+      telephone: `+972${PHONE_DISPLAY.replace(/\D/g, "").replace(/^0/, "")}`,
+      areaServed: "IL",
+      logo: `${SITE_URL}/icon.svg`,
+    },
+  ],
 };
 
 // ── Content (ported from the imported design's renderVals) ─────────────────
@@ -81,6 +122,10 @@ export default function Home() {
         WebkitFontSmoothing: "antialiased",
       }}
     >
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
       <div data-id="page-container" style={{ maxWidth: 1180, margin: "0 auto" }}>
         <SiteHeader />
 
