@@ -78,22 +78,46 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: false, error: "bad_payload" }, { status: 400 });
   }
 
-  const processToken = pick(flat, "data.processToken", "processToken");
-  const processId = pick(flat, "data.processId", "processId");
+  // The new-system notification carries TWO token pairs: the payment-LINK one
+  // (paymentLinkProcessId/-Token — this is what Create Payment Link returned to
+  // us and what the order stores) and a transaction-level processId/processToken
+  // minted at charge time. Match the link token; accept the transaction token
+  // too in case Grow ever sends only that (an exact match against a stored
+  // secret stays authenticated either way).
+  const tokenCandidates = [
+    pick(flat, "data.paymentLinkProcessToken", "paymentLinkProcessToken"),
+    pick(flat, "data.processToken", "processToken"),
+  ].filter(Boolean);
+  const processId = pick(
+    flat,
+    "data.paymentLinkProcessId",
+    "paymentLinkProcessId",
+    "data.processId",
+    "processId",
+  );
   const statusCode = pick(flat, "data.statusCode", "statusCode");
   const statusText = pick(flat, "data.status", "status");
   const sumStr = pick(flat, "data.sum", "sum", "data.paymentSum", "paymentSum");
 
-  if (!processToken) {
-    console.warn("[checkout/callback] notification without processToken; ignoring");
+  if (tokenCandidates.length === 0) {
+    console.warn("[checkout/callback] notification without any process token; ignoring");
     return NextResponse.json({ ok: true }); // ack so Grow stops retrying
   }
 
   // --- token lookup doubles as authentication (see header comment) ---
-  const order = await findOrderByProcessToken(processToken);
+  let order = null;
+  for (const t of tokenCandidates) {
+    order = await findOrderByProcessToken(t);
+    if (order) break;
+  }
   if (!order) {
+    // Log the full field list (values masked) so a naming mismatch diagnoses
+    // itself from the journal instead of silently losing payments.
+    const masked = Object.keys(flat)
+      .map((k) => `${k}=${flat[k].length > 8 ? flat[k].slice(0, 2) + "…" + flat[k].slice(-4) : flat[k]}`)
+      .join(" | ");
     console.warn(
-      `[checkout/callback] no order for processToken …${processToken.slice(-6)} (processId ${processId}); ignoring`,
+      `[checkout/callback] no order for tokens [${tokenCandidates.map((t) => "…" + t.slice(-6)).join(", ")}] (processId ${processId}); fields: ${masked}`,
     );
     return NextResponse.json({ ok: true });
   }
