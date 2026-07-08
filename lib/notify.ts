@@ -90,20 +90,33 @@ async function emailOwnerPaid(order: Order): Promise<void> {
  * 127.0.0.1:8081, POST /api/send). Runs ON the leader via execOnPeer, mirroring
  * the email path. The {recipient,message} JSON is base64-transported and decoded
  * on the NUC, so customer-controlled text (name/notes) never touches a shell.
+ *
+ * The bridge requires "Authorization: Bearer <token>" on every /api/* request
+ * (401 otherwise — this silently ate the first real order notification on
+ * 2026-07-08). The token lives ONLY on the NUC (store/.bridge-token, 0600) and
+ * is read there at exec time, so the secret never enters this repo or crosses
+ * the wire. We also verify the bridge's JSON answer — a delivered HTTP response
+ * is not a delivered message.
  */
+const BOT_BRIDGE_TOKEN_FILE =
+  "/opt/automateLinux/mcpServers/whatsapp/whatsapp-bridge-bot/store/.bridge-token";
+
 async function whatsappOwnerPaid(order: Order): Promise<void> {
   const payload = JSON.stringify({
     recipient: OWNER_WHATSAPP,
     message: orderWhatsAppBody(order),
   });
   const b64 = Buffer.from(payload, "utf8").toString("base64");
-  const shellCmd = `printf %s '${b64}' | base64 -d | curl -sS -X POST http://127.0.0.1:8081/api/send -H 'Content-Type: application/json' --data-binary @-`;
-  await sendDaemonCommand({
+  const shellCmd = `printf %s '${b64}' | base64 -d | curl -sS -f -X POST http://127.0.0.1:8081/api/send -H "Authorization: Bearer $(cat ${BOT_BRIDGE_TOKEN_FILE})" -H 'Content-Type: application/json' --data-binary @-`;
+  const reply = await sendDaemonCommand({
     command: "execOnPeer",
     peer: "leader",
     directory: "/root",
     shellCmd,
   });
+  if (!reply.includes('"success":true')) {
+    throw new Error(`bot bridge did not confirm delivery: ${reply.slice(0, 300)}`);
+  }
   console.log(`[notify] owner WhatsApp'd for paid order ${order.id}`);
 }
 
