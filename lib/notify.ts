@@ -1,13 +1,17 @@
 import "server-only";
 import { sendDaemonCommand } from "@/lib/daemon";
-import { EMAIL, PHONE_DISPLAY } from "@/app/_components/contact";
+import { EMAIL } from "@/app/_components/contact";
 import type { Order } from "@/lib/orders";
 
 const ils = (n: number | null | undefined) =>
   typeof n === "number" ? `${n.toLocaleString("he-IL")} ש"ח` : "—";
 
-/** Owner WhatsApp recipient in bridge format (E.164 digits, no +): 055… → 972…. */
-const OWNER_WHATSAPP = "972" + PHONE_DISPLAY.replace(/\D/g, "").replace(/^0/, "");
+/**
+ * Order alerts go to the dedicated "panel shed" WhatsApp ops group (owner +
+ * bot are members; the bot account is the sender, so the owner's phone
+ * actually rings — self-sent messages don't notify).
+ */
+const OWNER_WHATSAPP = "120363428530759851@g.us";
 
 /**
  * Build a full UTF-8 MIME message. Subject + body are base64-encoded inside the
