@@ -1,11 +1,7 @@
 import { NextResponse } from "next/server";
 import { appendOrder, updateOrder, type Order, type OrderLine } from "@/lib/orders";
-import {
-  meshulamConfig,
-  createPaymentProcess,
-  isValidIsraeliMobile,
-  normalizeIsraeliPhone,
-} from "@/lib/meshulam";
+import { growMakeConfig, createPaymentLink } from "@/lib/growMake";
+import { isValidIsraeliMobile, normalizeIsraeliPhone } from "@/lib/meshulam";
 
 export const runtime = "nodejs";
 
@@ -34,7 +30,7 @@ function publicOrigin(request: Request): string | null {
 }
 
 export async function POST(request: Request) {
-  const cfg = meshulamConfig();
+  const cfg = growMakeConfig();
   if (!cfg) {
     // Explicit, no silent fallback: online payment isn't wired up yet.
     return NextResponse.json(
@@ -86,7 +82,7 @@ export async function POST(request: Request) {
   await appendOrder(order);
 
   try {
-    const proc = await createPaymentProcess({
+    const proc = await createPaymentLink({
       cfg,
       sum: total,
       description: order.title || "מחסן פאנל",
@@ -102,7 +98,7 @@ export async function POST(request: Request) {
     });
     return NextResponse.json({ ok: true, orderId: order.id, redirectUrl: proc.url });
   } catch (e) {
-    console.error("[checkout] createPaymentProcess failed", e);
+    console.error("[checkout] createPaymentLink failed", e);
     await updateOrder(order.id, { paymentStatus: "failed", failedAt: new Date().toISOString() });
     return NextResponse.json({ ok: false, error: "gateway_error" }, { status: 502 });
   }

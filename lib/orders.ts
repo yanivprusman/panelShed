@@ -76,6 +76,17 @@ export async function findOrder(id: string): Promise<Order | null> {
   return orders.find((o) => o.id === id) ?? null;
 }
 
+/**
+ * Look an order up by its Grow processToken — the server-only shared secret the
+ * payment webhook echoes back. A match both finds the order and authenticates
+ * the caller as Grow.
+ */
+export async function findOrderByProcessToken(token: string): Promise<Order | null> {
+  if (!token) return null;
+  const orders = await readOrders();
+  return orders.find((o) => o.processToken === token) ?? null;
+}
+
 /** Re-read, patch the matching order in place, and write back atomically. */
 export async function updateOrder(
   id: string,

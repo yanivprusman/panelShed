@@ -4,31 +4,46 @@
 This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` before writing any code. Heed deprecation notices.
 <!-- END:nextjs-agent-rules -->
 
-# Payments (Grow / Meshulam)
+# Payments (Grow via the free Make.com bridge)
 
-The "קנה עכשיו" buy card charges the **full amount** online via **Grow (Meshulam)**
-— an Israeli direct processor that accepts **Bit + credit cards + Apple/Google Pay**.
+The "קנה עכשיו" buy card charges the **full amount** online via **Grow** (Israeli
+processor: **Bit + credit cards + Apple/Google Pay**). Grow's direct Light API costs
+**₪500+VAT/month**, so (decision 2026-07-08) payment pages are created through Grow's
+**free Make.com app** instead: a Make scenario ("panelshed-checkout", eu1.make.com
+scenario `6484620`, account yanivprusman@gmail.com) receives our order webhook, runs
+Grow's "Create Payment Link" module (connection authorized to ג.ח. פרוייקטים via
+business id + OTP — no Grow credentials in this repo), and answers synchronously with
+`{ url, processId, processToken }`.
 
-Flow (all server-side; Grow blocks browser-origin calls):
+Flow (all server-side):
 1. `app/_components/buy-panel.tsx` → POST `/api/checkout` (name + Israeli mobile + optional email).
 2. `app/api/checkout/route.ts` persists a `pending` order (`lib/orders.ts`, `data/orders.json`,
-   gitignored) and calls `createPaymentProcess` (`lib/meshulam.ts`) → returns Grow's hosted-page
-   URL; the browser is redirected there to pay.
-3. `app/api/checkout/callback/route.ts` is Grow's **server-to-server webhook** (`notifyUrl`) — the
-   **only** authority for marking an order `paid`. It authenticates the callback by matching the
-   `processToken` we stored at create time (a server-only shared secret), checks the charged `sum`
-   against the order total, flips to `paid`, then calls `approveTransaction` to acknowledge Grow.
+   gitignored) and calls `createPaymentLink` (`lib/growMake.ts`) → returns Grow's hosted-page
+   URL (pay.grow.link); the browser is redirected there to pay.
+3. `app/api/checkout/callback/route.ts` receives Grow's **server-to-server notification**
+   (`notifyUrl`, new-system PaymentLinks format; JSON or form-encoded — both normalised) — the
+   **only** authority for marking an order `paid`. It authenticates by looking the order up by
+   `processToken` (a server-only shared secret stored at create time), checks the charged `sum`
+   against the order total, then flips to `paid`. There is no approveTransaction on the free
+   route — duplicate notifications are deduped by the already-paid guard.
 4. Grow redirects the buyer to `/checkout/success?order=…`, which polls `/api/checkout/status`
    until the webhook resolves (the redirect itself carries no payment facts).
 
-**Credentials** live in `.env.local` (gitignored): `MESHULAM_USER_ID`, `MESHULAM_PAGE_CODE`,
-`MESHULAM_ENV` (`sandbox`|`live`), optional `MESHULAM_API_KEY`. While blank, `/api/checkout` returns
-`payments_not_configured` (503) and the buy button shows a clear error — nothing silently degrades.
-Get sandbox identifiers from the Grow dashboard; go `live` only after Grow's production review
-(support@grow.business). API reference: https://grow-il.readme.io/.
+**Env** (`.env.local`, gitignored): `GROW_MAKE_WEBHOOK_URL` + `GROW_MAKE_WEBHOOK_KEY` (the
+`x-make-apikey` value; requests without it get 401 from Make). While blank, `/api/checkout`
+returns `payments_not_configured` (503) and the buy button shows a clear error — nothing
+silently degrades.
+
+`lib/meshulam.ts` (direct Light-API client, proven in sandbox) is **dormant, kept for a paid
+upgrade**: same `{url, processId, processToken}` contract, so swapping back = paying Grow for
+API access, getting `userId`/`pageCode`, and switching the call in `/api/checkout`.
+Docs: https://grow-il.readme.io/ (API) · grow-il.readme.io/docs/grow-app-for-make (Make app).
 
 Grow's `successUrl`/`notifyUrl` must be public HTTPS (not localhost) — they go through the nginx
 host `panelshed.{dev,prod}.ya-niv.com`, derived from the request's `x-forwarded-*` headers.
+The Make webhook module payload contract: `orderId, amount, description, customerName,
+customerPhone, customerEmail, successUrl, notifyUrl` (orderId also lands in Grow's Custom
+Field 1 for console-side reconciliation; installments capped at 3).
 
 # Google Ads conversion tracking
 
