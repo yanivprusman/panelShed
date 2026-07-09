@@ -73,6 +73,23 @@ textarea:focus-visible,
   background: #2576b5;
 }
 
+/* WhatsApp lead CTA (card + floating) — brand green, background here so :hover overrides. */
+.wa-btn,
+.wa-float {
+  background: #25d366;
+  transition: background 140ms ease, box-shadow 140ms ease, transform 140ms ease;
+}
+
+.wa-btn:hover,
+.wa-float:hover {
+  background: #1ebe5a;
+}
+
+.wa-float:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 24px rgba(37, 211, 102, 0.55);
+}
+
 /* CAD planner embed: taller on desktop, shorter on phones. */
 .cad-iframe {
   display: block;

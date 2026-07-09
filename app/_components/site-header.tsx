@@ -1,11 +1,6 @@
-import {
-  BRAND,
-  SLOGAN,
-  GENERIC_WHATSAPP_URL,
-  TEL_URL,
-  PHONE_DISPLAY,
-} from "./contact";
-import { WhatsAppIcon, PhoneIcon } from "./icons";
+import { BRAND, SLOGAN, TEL_URL, PHONE_DISPLAY } from "./contact";
+import { PhoneIcon } from "./icons";
+import { HeaderWhatsApp } from "./whatsapp-cta";
 
 /**
  * Top brand bar: logo badge + name + slogan on the right (RTL start), and the
@@ -60,25 +55,7 @@ export default function SiteHeader() {
       </div>
 
       <div data-id="header-contact" style={{ display: "flex", alignItems: "center", gap: 18 }}>
-        <a
-          data-id="header-whatsapp"
-          href={GENERIC_WHATSAPP_URL}
-          target="_blank"
-          rel="noopener noreferrer"
-          aria-label="וואטסאפ"
-          style={{
-            display: "inline-flex",
-            alignItems: "center",
-            gap: 7,
-            textDecoration: "none",
-            color: "#2f2f2f",
-            fontWeight: 700,
-            fontSize: 15,
-          }}
-        >
-          <WhatsAppIcon size={20} />
-          וואטסאפ
-        </a>
+        <HeaderWhatsApp />
         <a
           data-id="header-phone"
           href={TEL_URL}

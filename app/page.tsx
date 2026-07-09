@@ -11,6 +11,7 @@ import { SITE_URL, SITE_NAME } from "@/lib/site";
 import { SIZES } from "./_components/sizes";
 import { BRAND, PHONE_DISPLAY, EMAIL } from "./_components/contact";
 import FaqSection, { FAQ_ITEMS } from "./_components/faq";
+import { FloatingWhatsApp } from "./_components/whatsapp-cta";
 
 const galleryImages = [
   "/products/lehamhasha.png",
@@ -219,6 +220,8 @@ export default function Home() {
 
         <SiteFooter />
       </div>
+
+      <FloatingWhatsApp />
     </div>
   );
 }

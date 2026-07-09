@@ -329,6 +329,38 @@ export default function BuyPanel({
         ))}
       </div>
 
+      {/* Primary lead CTA: one-tap WhatsApp with the configured product, no
+          up-front payment. Fires the Google Ads Lead conversion on click so the
+          campaign records + can optimize for the conversion actually happening
+          on a high-ticket item. */}
+      <a
+        data-id="whatsapp-lead-cta"
+        href={askWhatsappUrl}
+        target="_blank"
+        rel="noopener noreferrer"
+        onClick={() => reportLead({ value: newTotal })}
+        className="wa-btn"
+        style={{
+          width: "100%",
+          boxSizing: "border-box",
+          marginTop: 22,
+          color: "#fff",
+          borderRadius: 8,
+          padding: 15,
+          fontFamily: "inherit",
+          fontSize: 18,
+          fontWeight: 700,
+          textDecoration: "none",
+          display: "inline-flex",
+          alignItems: "center",
+          justifyContent: "center",
+          gap: 10,
+        }}
+      >
+        <WhatsAppIcon size={22} color="#fff" />
+        לייעוץ מהיר והזמנה בוואטסאפ
+      </a>
+
       <button
         type="button"
         data-id="buy-now"
@@ -336,7 +368,7 @@ export default function BuyPanel({
         onClick={() => setOpen(true)}
         style={{
           width: "100%",
-          marginTop: 22,
+          marginTop: 12,
           color: "#fff",
           border: "none",
           borderRadius: 8,
@@ -408,6 +440,7 @@ export default function BuyPanel({
         href={askWhatsappUrl}
         target="_blank"
         rel="noopener noreferrer"
+        onClick={() => reportLead({ value: newTotal })}
         style={{
           display: "inline-flex",
           alignItems: "center",

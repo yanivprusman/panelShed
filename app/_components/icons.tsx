@@ -5,9 +5,9 @@ import type { CSSProperties } from "react";
  * are presentational (no state/hooks), so they render in both server and
  * client components.
  */
-export function WhatsAppIcon({ size = 20 }: { size?: number }) {
+export function WhatsAppIcon({ size = 20, color = "#25D366" }: { size?: number; color?: string }) {
   return (
-    <svg width={size} height={size} viewBox="0 0 32 32" fill="#25D366" aria-hidden="true">
+    <svg width={size} height={size} viewBox="0 0 32 32" fill={color} aria-hidden="true">
       <path d="M16 .5C7.4.5.5 7.4.5 16c0 2.8.7 5.4 2 7.7L.5 31.5l8-2.1c2.2 1.2 4.8 1.9 7.5 1.9 8.6 0 15.5-6.9 15.5-15.5S24.6.5 16 .5zm0 28c-2.4 0-4.7-.6-6.7-1.8l-.5-.3-4.7 1.2 1.3-4.6-.3-.5C3.6 20.3 3 18.2 3 16 3 8.8 8.8 3 16 3s13 5.8 13 13-5.8 12.5-13 12.5z" />
       <path d="M23.4 19.2c-.4-.2-2.3-1.1-2.6-1.3-.4-.1-.6-.2-.9.2s-1 1.3-1.2 1.5c-.2.2-.4.3-.8.1s-1.6-.6-3-1.9c-1.1-1-1.9-2.2-2.1-2.6s0-.6.2-.8c.2-.2.4-.4.5-.6.2-.2.2-.4.4-.6.1-.3 0-.5 0-.7s-.9-2.1-1.2-2.9c-.3-.7-.6-.6-.9-.6h-.7c-.2 0-.6.1-.9.5s-1.2 1.2-1.2 2.9 1.2 3.4 1.4 3.6c.2.2 2.4 3.7 5.8 5.1.8.4 1.5.6 2 .7.8.3 1.6.2 2.2.1.7-.1 2.1-.9 2.4-1.7.3-.8.3-1.5.2-1.7-.1-.1-.3-.2-.7-.4z" />
     </svg>
