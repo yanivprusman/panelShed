@@ -72,6 +72,12 @@ export function isValidIsraeliMobile(raw: string): boolean {
   return /^05\d{8}$/.test(normalizeIsraeliPhone(raw));
 }
 
+/** Grow's payment page rejects a blank/invalid pageField[email] (427), so a
+ *  valid email is mandatory to open a payment process. */
+export function isValidEmail(raw: string): boolean {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test((raw || "").trim());
+}
+
 interface CreateProcessArgs {
   cfg: MeshulamConfig;
   sum: number;

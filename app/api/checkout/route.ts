@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { appendOrder, updateOrder, type Order, type OrderLine } from "@/lib/orders";
 import { growMakeConfig, createPaymentLink } from "@/lib/growMake";
-import { isValidIsraeliMobile, normalizeIsraeliPhone } from "@/lib/meshulam";
+import { isValidIsraeliMobile, isValidEmail, normalizeIsraeliPhone } from "@/lib/meshulam";
 
 export const runtime = "nodejs";
 
@@ -60,6 +60,11 @@ export async function POST(request: Request) {
   }
   if (!isValidIsraeliMobile(phone)) {
     return NextResponse.json({ ok: false, error: "bad_phone" }, { status: 400 });
+  }
+  // Grow rejects a payment page with a blank/invalid email (427) — require it
+  // here so the buyer gets a clear error instead of a downstream gateway_error.
+  if (!isValidEmail(email)) {
+    return NextResponse.json({ ok: false, error: "bad_email" }, { status: 400 });
   }
   const total = typeof body.totalIls === "number" ? body.totalIls : NaN;
   if (!Number.isFinite(total) || total <= 0) {

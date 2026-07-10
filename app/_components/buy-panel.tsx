@@ -26,6 +26,9 @@ const normalizePhone = (raw: string) => {
   return d;
 };
 const isValidMobile = (raw: string) => /^05\d{8}$/.test(normalizePhone(raw));
+/** Grow requires a valid email on the payment page (blank → 427), so it's
+ *  mandatory at checkout — it's also where Grow sends the receipt. */
+const isValidEmail = (raw: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(raw.trim());
 
 const selectStyle: CSSProperties = {
   width: "100%",
@@ -187,10 +190,12 @@ export default function BuyPanel({
   }
 
   /**
-   * The site is still under construction and online payment (Grow) isn't wired
-   * up yet, so the modal doesn't charge. Submitting validates the buyer's
-   * details, then switches to a confirmation view that hands the full order off
-   * to WhatsApp — collection happens only after the job is completed.
+   * Submit the order and charge online via Grow. Validates name + Israeli mobile
+   * (fires the Lead conversion), then requires a valid email — Grow rejects a
+   * payment page without one (427) and sends the receipt there — before POSTing
+   * to /api/checkout, which opens a Grow payment process and returns its hosted
+   * page URL; the browser is then redirected to Grow to pay. On any gateway
+   * error, a clear message points the buyer to WhatsApp.
    */
   async function submitOrder(e: FormEvent) {
     e.preventDefault();
@@ -204,8 +209,16 @@ export default function BuyPanel({
       return;
     }
     // Starting checkout = a strong lead signal for Google Ads (no-op unless
-    // NEXT_PUBLIC_GADS_LEAD_LABEL is set), weighted by the cart total.
+    // NEXT_PUBLIC_GADS_LEAD_LABEL is set), weighted by the cart total. Fired on
+    // name+phone so we still capture the lead even if the email step stops here.
     reportLead({ value: newTotal });
+
+    // Grow rejects a payment page with a blank/invalid email (427), so it's
+    // required to proceed to payment — and it's where the receipt is sent.
+    if (!isValidEmail(email)) {
+      setError("נא למלא כתובת אימייל תקינה — לשליחת הקבלה");
+      return;
+    }
 
     // Create the order + Grow payment process server-side, then hand the browser
     // off to Grow's hosted secure payment page. No fallback: if payments aren't
@@ -554,8 +567,9 @@ export default function BuyPanel({
                       data-id="order-email"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      placeholder="אימייל (לא חובה)"
+                      placeholder="אימייל (לקבלה) *"
                       aria-label="אימייל"
+                      aria-required="true"
                       inputMode="email"
                       type="email"
                       style={inputStyle}
