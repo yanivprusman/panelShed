@@ -62,3 +62,21 @@ Env (`.env.local`, gitignored; all `NEXT_PUBLIC_*` — the id/labels are not sec
 actions in Google Ads → Tools → Conversions, then set `NEXT_PUBLIC_GOOGLE_ADS_ID` (`AW-…`),
 `NEXT_PUBLIC_GADS_PURCHASE_LABEL`, `NEXT_PUBLIC_GADS_LEAD_LABEL` (the label is the part after the
 slash in the action's `send_to`).
+
+# Pricing model (2026-07-11)
+
+Three separated price components — the customer composes them in the configurator:
+1. **Materials** — quoted LIVE from the CAD app: `lib/cad-quote.ts` fetches
+   `GET ${CAD_QUOTE_BASE_URL}/api/quote?code=panel-shed&width=&length=&height=220`
+   per size (BOM total at the panel-shed distributor's prices, rounded to ₪10,
+   1h revalidate). `sizes.ts` holds NO prices. Updating distributor prices on
+   diy-cad.com changes the storefront + merchant feed within an hour, no deploy.
+   No fallback: missing env var / unreachable CAD / missing item prices fail loudly.
+2. **הובלה (shipping)** — flat `SHIPPING_ILS` (₪450, competitor-verified vs panelil.co.il).
+3. **הרכבה (installation)** — only sold WITH shipping ("הובלה והרכבה"), size-tiered via
+   `deliveryInstallPriceFor` (₪2,350; >9m² i.e. 3x4 → ₪2,840). No standalone install.
+
+Google Merchant Center (account 5823015132, ג.ח. פרוייקטים) is fully onboarded:
+feed `/merchant-feed` (carries `g:shipping` ₪450/IL), account shipping = flat ₪450,
+delivery 8–21 business days, return policy = `/returns` page (14 days, ₪100 restocking
+fee, buyer pays transport both ways, In-store method).
