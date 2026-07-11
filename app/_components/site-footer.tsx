@@ -21,19 +21,35 @@ export default function SiteFooter() {
         flexWrap: "wrap",
       }}
     >
-      <Link
-        data-id="footer-accessibility"
-        href="/accessibility"
-        style={{
-          color: "#7a7a7a",
-          fontWeight: 600,
-          fontSize: 13,
-          textDecoration: "underline",
-          marginInlineEnd: "auto",
-        }}
+      <span
+        data-id="footer-legal-links"
+        style={{ display: "inline-flex", gap: 14, marginInlineEnd: "auto" }}
       >
-        הצהרת נגישות
-      </Link>
+        <Link
+          data-id="footer-accessibility"
+          href="/accessibility"
+          style={{
+            color: "#7a7a7a",
+            fontWeight: 600,
+            fontSize: 13,
+            textDecoration: "underline",
+          }}
+        >
+          הצהרת נגישות
+        </Link>
+        <Link
+          data-id="footer-returns"
+          href="/returns"
+          style={{
+            color: "#7a7a7a",
+            fontWeight: 600,
+            fontSize: 13,
+            textDecoration: "underline",
+          }}
+        >
+          מדיניות ביטול והחזרות
+        </Link>
+      </span>
       <a
         data-id="footer-whatsapp"
         href={GENERIC_WHATSAPP_URL}
