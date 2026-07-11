@@ -8,7 +8,7 @@ import SiteHeader from "./_components/site-header";
 import SiteFooter from "./_components/site-footer";
 import { SizeProvider } from "./_components/size-context";
 import { SITE_URL, SITE_NAME } from "@/lib/site";
-import { SIZES } from "./_components/sizes";
+import { SIZES, SHIPPING_ILS } from "./_components/sizes";
 import { BRAND, PHONE_DISPLAY, EMAIL } from "./_components/contact";
 import FaqSection, { FAQ_ITEMS } from "./_components/faq";
 import { FloatingWhatsApp } from "./_components/whatsapp-cta";
@@ -78,16 +78,23 @@ const jsonLd = {
 
 // ── Content (ported from the imported design's renderVals) ─────────────────
 const product = {
-  // LOCKED: exactly two configurator options — delivery (הובלה+הרכבה) and
+  // LOCKED: exactly two configurator options — delivery (הובלה/הרכבה) and
   // floor (ריצפה). Do NOT re-add "תוספת שדרוג דלת" (door) or "חלונות ופתחי
   // אוורור" (windows/vents) — the user removed them and they regressed; see
   // AGENTS.md.
+  //
+  // Shipping is priced separately from installation (user decision 2026-07-11,
+  // competitor-verified against panelil.co.il): flat ₪450 shipping-only, and
+  // הובלה+הרכבה derived from footprint (₪2,350; 3x4 → ₪2,840) via
+  // deliveryInstallPriceFor. Installation is never sold without shipping —
+  // no competitor offers it and neither do we.
   options: [
     {
-      label: "הובלה+הרכבה:",
+      label: "הובלה והרכבה:",
       choices: [
-        { label: "ללא", price: null },
-        { label: "הובלה והרכבה", price: 2350 },
+        { label: "ללא (איסוף עצמי)", price: null },
+        { label: "הובלה בלבד", price: SHIPPING_ILS },
+        { label: "הובלה והרכבה", price: null, priceFromSize: "deliveryInstall" as const },
       ],
     },
     {

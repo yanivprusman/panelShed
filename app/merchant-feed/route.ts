@@ -1,4 +1,4 @@
-import { SIZES, productTitle, type ShedSize } from "@/app/_components/sizes";
+import { SIZES, SHIPPING_ILS, productTitle, type ShedSize } from "@/app/_components/sizes";
 import { SITE_URL, SITE_NAME } from "@/lib/site";
 
 /**
@@ -43,6 +43,10 @@ function itemXml(s: ShedSize): string {
       <g:condition>new</g:condition>
       <g:brand>${esc(SITE_NAME)}</g:brand>
       <g:identifier_exists>no</g:identifier_exists>
+      <g:shipping>
+        <g:country>IL</g:country>
+        <g:price>${SHIPPING_ILS}.00 ILS</g:price>
+      </g:shipping>
       <g:google_product_category>Home &amp; Garden &gt; Lawn &amp; Garden &gt; Outdoor Structures &gt; Sheds, Garages &amp; Carports</g:google_product_category>
       <g:product_type>מחסני גינה</g:product_type>
     </item>`;

@@ -8,12 +8,16 @@ import {
   type ReactNode,
 } from "react";
 import { useSize } from "./size-context";
-import { SIZES, productTitle, floorPriceFor } from "./sizes";
+import { SIZES, productTitle, floorPriceFor, deliveryInstallPriceFor } from "./sizes";
 import { whatsappUrl } from "./contact";
 import { WhatsAppIcon, CheckIcon } from "./icons";
 import { reportLead } from "@/lib/gtag";
 
-type Choice = { label: string; price: number | null; priceFromSize?: "floor" };
+type Choice = {
+  label: string;
+  price: number | null;
+  priceFromSize?: "floor" | "deliveryInstall";
+};
 type Group = { label: string; choices: Choice[] };
 
 const ils = (n: number) => `₪ ${n.toLocaleString("he-IL")}`;
@@ -165,10 +169,15 @@ export default function BuyPanel({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Some add-ons (the pine-deck floor) are priced by footprint, not flat — their
-  // choice carries priceFromSize and the real price is derived from the size.
+  // Some add-ons (pine-deck floor, delivery+install) are priced by footprint,
+  // not flat — their choice carries priceFromSize and the real price is
+  // derived from the selected size.
   const effPrice = (c: Choice): number | null =>
-    c.priceFromSize === "floor" ? floorPriceFor(size) : c.price;
+    c.priceFromSize === "floor"
+      ? floorPriceFor(size)
+      : c.priceFromSize === "deliveryInstall"
+        ? deliveryInstallPriceFor(size)
+        : c.price;
 
   const chosen = useMemo(
     () => options.map((g, i) => g.choices[sel[i]] ?? g.choices[0]),

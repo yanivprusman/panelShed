@@ -32,5 +32,21 @@ export const FLOOR_ILS_PER_SQM = 400;
 export const floorPriceFor = (s: ShedSize) =>
   Math.round(((s.widthCm * s.depthCm) / 10000) * FLOOR_ILS_PER_SQM);
 
+/**
+ * Shipping (הובלה בלבד) is flat regardless of shed size — competitor-verified
+ * 7/2026: panelil.co.il charges ₪450 (גדרה–חדרה) for every size from 3x2 to
+ * 5x4. Installation is only sold bundled with shipping (הובלה והרכבה) — neither
+ * panelil nor hamechola offers assembly without delivery.
+ */
+export const SHIPPING_ILS = 450;
+
+/**
+ * הובלה והרכבה scales with footprint: both competitors charge ₪2,350 up to
+ * 9m² (3x2 … 3x3/4x2); panelil then steps to ₪2,840 at 12m² (3x4) and ₪3,150
+ * at 20m² (5x4). Our lineup tops out at 3x4, so one threshold covers it.
+ */
+export const deliveryInstallPriceFor = (s: ShedSize) =>
+  (s.widthCm * s.depthCm) / 10000 > 9 ? 2840 : 2350;
+
 export const productTitle = (sizeLabel: string) =>
   `מחסן גינה פאנל מבודד ${sizeLabel} מטר`;
