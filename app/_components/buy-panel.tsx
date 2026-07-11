@@ -8,7 +8,12 @@ import {
   type ReactNode,
 } from "react";
 import { useSize } from "./size-context";
-import { SIZES, productTitle, floorPriceFor, deliveryInstallPriceFor } from "./sizes";
+import {
+  productTitle,
+  floorPriceFor,
+  deliveryInstallPriceFor,
+  type PricedShedSize,
+} from "./sizes";
 import { whatsappUrl } from "./contact";
 import { WhatsAppIcon, CheckIcon } from "./icons";
 import { reportLead } from "@/lib/gtag";
@@ -139,6 +144,7 @@ function Chevron() {
  * the description's dimensions block stays in sync.
  */
 export default function BuyPanel({
+  sizes,
   options,
   buyLabel,
   delivery,
@@ -147,6 +153,7 @@ export default function BuyPanel({
   askLabel,
   showTrustBadges = true,
 }: {
+  sizes: PricedShedSize[];
   options: Group[];
   buyLabel: string;
   delivery: string;
@@ -156,7 +163,7 @@ export default function BuyPanel({
   showTrustBadges?: boolean;
 }) {
   const { sizeIndex, setSizeIndex } = useSize();
-  const size = SIZES[sizeIndex];
+  const size = sizes[sizeIndex];
   const base = size.price;
   const title = productTitle(size.label);
 
@@ -315,7 +322,7 @@ export default function BuyPanel({
               value={sizeIndex}
               onChange={(e) => setSizeIndex(Number(e.target.value))}
             >
-              {SIZES.map((s, j) => (
+              {sizes.map((s, j) => (
                 <option key={j} data-id={`size-option-${j}`} value={j}>
                   {s.label} מטר — {ils(s.price)}
                 </option>

@@ -1,16 +1,17 @@
-import { SIZES, SHIPPING_ILS, productTitle, type ShedSize } from "@/app/_components/sizes";
+import { SHIPPING_ILS, productTitle, type PricedShedSize } from "@/app/_components/sizes";
+import { getPricedSizes } from "@/lib/cad-quote";
 import { SITE_URL, SITE_NAME } from "@/lib/site";
 
 /**
  * Google Merchant Center product feed (RSS 2.0 + the g: namespace), served at
  * /merchant-feed and registered in Merchant Center as a scheduled fetch.
  *
- * One item per shed size, generated from SIZES so prices/titles can never drift
- * from the storefront — the feed regenerates on every deploy (which is when the
- * prices in sizes.ts change). `link` deep-links to /?size=<label> so the ad
- * lands on the matching size and the visible price equals `g:price` (Google
- * disapproves feed↔landing-page price mismatches). Made-to-order sheds have no
- * GTIN/MPN, hence identifier_exists=no.
+ * One item per shed size. Prices are quoted live from the CAD app's bill of
+ * materials (lib/cad-quote.ts) — the same source the storefront page renders —
+ * so feed and landing page can never drift. `link` deep-links to /?size=<label>
+ * so the ad lands on the matching size and the visible price equals `g:price`
+ * (Google disapproves feed↔landing-page price mismatches). Made-to-order sheds
+ * have no GTIN/MPN, hence identifier_exists=no.
  */
 export const runtime = "nodejs";
 
@@ -23,7 +24,7 @@ function esc(s: string): string {
     .replace(/'/g, "&apos;");
 }
 
-function itemXml(s: ShedSize): string {
+function itemXml(s: PricedShedSize): string {
   const id = `shed-${s.label}`;
   const title = productTitle(s.label);
   const link = `${SITE_URL}/?size=${encodeURIComponent(s.label)}`;
@@ -53,7 +54,8 @@ function itemXml(s: ShedSize): string {
 }
 
 export async function GET(): Promise<Response> {
-  const items = SIZES.map(itemXml).join("\n");
+  const sizes = await getPricedSizes();
+  const items = sizes.map(itemXml).join("\n");
   const xml = `<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0" xmlns:g="http://base.google.com/ns/1.0">
   <channel>

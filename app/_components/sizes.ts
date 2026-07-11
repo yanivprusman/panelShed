@@ -1,22 +1,28 @@
 /**
- * The shed sizes the storefront sells, with base prices (₪, before add-ons).
- * Label is "<width>x<depth>" in meters; widthCm/depthCm feed the dimensions
- * block. Roof is a single-slope 230→220cm across all sizes.
+ * The shed sizes the storefront sells. Label is "<width>x<depth>" in meters;
+ * widthCm/depthCm feed the dimensions block. Roof is a single-slope 230→220cm
+ * across all sizes.
+ *
+ * Materials prices are NOT stored here — they're quoted live from the CAD
+ * app's bill of materials at the panel-shed distributor's prices (user
+ * decision 2026-07-11). See lib/cad-quote.ts::getPricedSizes.
  */
-export type ShedSize = {
+export type ShedSizeSpec = {
   label: string;
   widthCm: number;
   depthCm: number;
-  price: number;
 };
 
-export const SIZES: ShedSize[] = [
-  { label: "2x2", widthCm: 200, depthCm: 200, price: 4150 },
-  { label: "3x2", widthCm: 300, depthCm: 200, price: 5050 },
-  { label: "3x2.5", widthCm: 300, depthCm: 250, price: 5650 },
-  { label: "3x3", widthCm: 300, depthCm: 300, price: 5950 },
-  { label: "4x2", widthCm: 400, depthCm: 200, price: 5950 },
-  { label: "3x4", widthCm: 300, depthCm: 400, price: 6650 },
+/** A size spec with its CAD-quoted materials price (₪, before add-ons). */
+export type PricedShedSize = ShedSizeSpec & { price: number };
+
+export const SIZES: ShedSizeSpec[] = [
+  { label: "2x2", widthCm: 200, depthCm: 200 },
+  { label: "3x2", widthCm: 300, depthCm: 200 },
+  { label: "3x2.5", widthCm: 300, depthCm: 250 },
+  { label: "3x3", widthCm: 300, depthCm: 300 },
+  { label: "4x2", widthCm: 400, depthCm: 200 },
+  { label: "3x4", widthCm: 300, depthCm: 400 },
 ];
 
 export const ROOF = { high: 230, low: 220 };
@@ -29,7 +35,7 @@ export const ROOF = { high: 230, low: 220 };
  */
 export const FLOOR_ILS_PER_SQM = 400;
 
-export const floorPriceFor = (s: ShedSize) =>
+export const floorPriceFor = (s: ShedSizeSpec) =>
   Math.round(((s.widthCm * s.depthCm) / 10000) * FLOOR_ILS_PER_SQM);
 
 /**
@@ -45,7 +51,7 @@ export const SHIPPING_ILS = 450;
  * 9m² (3x2 … 3x3/4x2); panelil then steps to ₪2,840 at 12m² (3x4) and ₪3,150
  * at 20m² (5x4). Our lineup tops out at 3x4, so one threshold covers it.
  */
-export const deliveryInstallPriceFor = (s: ShedSize) =>
+export const deliveryInstallPriceFor = (s: ShedSizeSpec) =>
   (s.widthCm * s.depthCm) / 10000 > 9 ? 2840 : 2350;
 
 export const productTitle = (sizeLabel: string) =>

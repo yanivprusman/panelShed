@@ -9,6 +9,7 @@ import SiteFooter from "./_components/site-footer";
 import { SizeProvider } from "./_components/size-context";
 import { SITE_URL, SITE_NAME } from "@/lib/site";
 import { SIZES, SHIPPING_ILS } from "./_components/sizes";
+import { getPricedSizes } from "@/lib/cad-quote";
 import { BRAND, PHONE_DISPLAY, EMAIL } from "./_components/contact";
 import FaqSection, { FAQ_ITEMS } from "./_components/faq";
 import { FloatingWhatsApp } from "./_components/whatsapp-cta";
@@ -33,8 +34,8 @@ export const metadata: Metadata = {
 
 // Structured data (schema.org) so Google can show rich results: the shed as a
 // Product with an aggregate offer (cheapest size upward), plus the business.
-const lowestPrice = Math.min(...SIZES.map((s) => s.price));
-const jsonLd = {
+// Built per-request because prices are quoted live from the CAD app.
+const buildJsonLd = (lowestPrice: number) => ({
   "@context": "https://schema.org",
   "@graph": [
     {
@@ -74,7 +75,7 @@ const jsonLd = {
       })),
     },
   ],
-};
+});
 
 // ── Content (ported from the imported design's renderVals) ─────────────────
 const product = {
@@ -125,7 +126,10 @@ const product = {
 
 const ACCENT = "#2f8fd6";
 
-export default function Home() {
+export default async function Home() {
+  // Materials prices quoted live from the CAD app (see lib/cad-quote.ts).
+  const sizes = await getPricedSizes();
+  const jsonLd = buildJsonLd(Math.min(...sizes.map((s) => s.price)));
   return (
     <div
       data-id="Home"
@@ -161,6 +165,7 @@ export default function Home() {
             {/* Purchase card (left) */}
             <div data-id="buy-column" style={{ flex: "1 1 380px", minWidth: 320, order: 2 }}>
               <BuyPanel
+                sizes={sizes}
                 options={product.options}
                 buyLabel={product.buyLabel}
                 delivery={product.delivery}
