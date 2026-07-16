@@ -7,6 +7,14 @@
 export const BRAND = "פאנל-שד";
 export const SLOGAN = "מכירה והתקנת מחסנים מפאנל מבודד בכל הארץ";
 
+/**
+ * Legal identity of the operating business, shown in the footer and the legal
+ * pages (תקנון, פרטיות). Required trust signal for an Israeli online store and
+ * for Google Merchant Center's Misrepresentation checks.
+ */
+export const LEGAL_NAME = "ג.ח. פרוייקטים";
+export const BUSINESS_ID = "036211126"; // עוסק מורשה
+
 export const PHONE_DISPLAY = "055-667-7260";
 const PHONE_E164 = "972556677260";
 export const TEL_URL = `tel:+${PHONE_E164}`;
