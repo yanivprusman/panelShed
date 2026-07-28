@@ -1,4 +1,10 @@
-import { SIZES, type PricedShedSize } from "@/app/_components/sizes";
+import {
+  SIZES,
+  STANDARD_HEIGHT_CM,
+  heightOf,
+  type PricedShedSize,
+  type ShedSizeSpec,
+} from "@/app/_components/sizes";
 
 /**
  * Live materials pricing from the CAD app (user decision 2026-07-11): each
@@ -12,12 +18,13 @@ import { SIZES, type PricedShedSize } from "@/app/_components/sizes";
  * (?width=<Wcm>&length=<Dcm>&height=220), so the storefront price and the
  * CAD page's own price proposal for the same shed can never diverge.
  *
+ * The same endpoint prices ANY footprint, which is what lets a shed designed in
+ * the CAD planner come back here and be sold — see app/api/custom-quote.
+ *
  * No fallback: if CAD is unreachable or any priceable item lacks a price,
  * this throws and the page/feed fails loudly rather than showing stale or
  * understated prices.
  */
-const SHED_HEIGHT_CM = 220;
-
 type QuoteResponse = {
   success: boolean;
   total?: number;
@@ -35,10 +42,14 @@ function quoteBaseUrl(): string {
   return base.replace(/\/$/, "");
 }
 
-async function quoteMaterialsPrice(widthCm: number, depthCm: number): Promise<number> {
+export async function quoteMaterialsPrice(
+  widthCm: number,
+  depthCm: number,
+  heightCm: number = STANDARD_HEIGHT_CM,
+): Promise<number> {
   const url =
     `${quoteBaseUrl()}/api/quote?code=panel-shed` +
-    `&width=${widthCm}&length=${depthCm}&height=${SHED_HEIGHT_CM}`;
+    `&width=${widthCm}&length=${depthCm}&height=${heightCm}`;
   const res = await fetch(url, { next: { revalidate: 3600 } });
   if (!res.ok) {
     throw new Error(`CAD quote failed (${res.status}) for ${widthCm}x${depthCm}`);
@@ -55,9 +66,12 @@ async function quoteMaterialsPrice(widthCm: number, depthCm: number): Promise<nu
   return Math.round(data.total / 10) * 10;
 }
 
+/** Attach the live CAD-quoted materials price to one size spec. */
+export async function priceSize(s: ShedSizeSpec): Promise<PricedShedSize> {
+  return { ...s, price: await quoteMaterialsPrice(s.widthCm, s.depthCm, heightOf(s)) };
+}
+
 /** All storefront sizes with their live CAD-quoted materials prices. */
 export async function getPricedSizes(): Promise<PricedShedSize[]> {
-  return Promise.all(
-    SIZES.map(async (s) => ({ ...s, price: await quoteMaterialsPrice(s.widthCm, s.depthCm) })),
-  );
+  return Promise.all(SIZES.map(priceSize));
 }

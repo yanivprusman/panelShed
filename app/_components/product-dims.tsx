@@ -1,17 +1,17 @@
 "use client";
 
 import { useSize } from "./size-context";
-import { SIZES } from "./sizes";
+import { heightOf } from "./sizes";
 
 /**
  * The boxed "מידות המחסן" block in the description — reactive to the selected
- * size. Light panel (#f7f9fb) with one dimension per ruled row.
+ * size, including a custom footprint designed in the CAD planner. Light panel
+ * (#f7f9fb) with one dimension per ruled row.
  */
 export default function ProductDims() {
-  const { sizeIndex } = useSize();
-  const s = SIZES[sizeIndex];
+  const { size: s } = useSize();
   const dims = [
-    `גובה: 220 ס"מ`,
+    `גובה: ${heightOf(s)} ס"מ`,
     `רוחב: ${s.widthCm} ס"מ`,
     `עומק: ${s.depthCm} ס"מ`,
   ];

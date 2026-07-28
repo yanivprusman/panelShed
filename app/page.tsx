@@ -150,7 +150,7 @@ export default async function Home() {
       <div data-id="page-container" style={{ maxWidth: 1180, margin: "0 auto" }}>
         <SiteHeader />
 
-        <SizeProvider>
+        <SizeProvider sizes={sizes}>
           <main id="main-content" tabIndex={-1} style={{ outline: "none" }}>
           {/* ===== TOP: GALLERY + PURCHASE CARD ===== */}
           <div
@@ -165,7 +165,6 @@ export default async function Home() {
             {/* Purchase card (left) */}
             <div data-id="buy-column" style={{ flex: "1 1 380px", minWidth: 320, order: 2 }}>
               <BuyPanel
-                sizes={sizes}
                 options={product.options}
                 buyLabel={product.buyLabel}
                 delivery={product.delivery}

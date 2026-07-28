@@ -1,24 +1,29 @@
 "use client";
 
 import { useSize } from "./size-context";
-import { SIZES } from "./sizes";
+import { heightOf } from "./sizes";
 
 /**
  * The "מתכנן המחסן" block in the description: an interactive 3D view of the shed
  * in its garden (an embed of the CAD app's orbit-enabled viewer, ?embed=1),
  * sized to the currently-selected shed, with an overlaid link into the full
  * planner. Below the frame: the planner heading + explainer.
+ *
+ * The planner link is a round trip, not a one-way exit: CAD shows a customer
+ * linked to us an "order these dimensions" button that comes back to this
+ * storefront with the footprint they designed, which SizeProvider then prices
+ * as a custom size.
  */
 const CAD_BASE =
   process.env.NEXT_PUBLIC_CAD_BASE_URL || "https://diy-cad.com";
 
 export default function Product3D() {
-  const { sizeIndex } = useSize();
-  const s = SIZES[sizeIndex];
-  // CAD convention: width × length (= depth) in cm; height = low wall (220).
-  const src = `${CAD_BASE}/?embed=1&width=${s.widthCm}&length=${s.depthCm}&height=220`;
+  const { size: s } = useSize();
+  const h = heightOf(s);
+  // CAD convention: width × length (= depth) in cm; height = low wall.
+  const src = `${CAD_BASE}/?embed=1&width=${s.widthCm}&length=${s.depthCm}&height=${h}`;
   // Full interactive planner (not the read-only embed), pre-set to this size.
-  const plannerUrl = `${CAD_BASE}/?dcode=panel-shed&width=${s.widthCm}&length=${s.depthCm}&height=220`;
+  const plannerUrl = `${CAD_BASE}/?dcode=panel-shed&width=${s.widthCm}&length=${s.depthCm}&height=${h}`;
 
   const pill = {
     position: "absolute" as const,

@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  useCallback,
   useMemo,
   useState,
   type CSSProperties,
@@ -12,7 +13,7 @@ import {
   productTitle,
   floorPriceFor,
   deliveryInstallPriceFor,
-  type PricedShedSize,
+  heightOf,
 } from "./sizes";
 import { whatsappUrl } from "./contact";
 import { WhatsAppIcon, CheckIcon } from "./icons";
@@ -77,6 +78,18 @@ const labelStyle: CSSProperties = {
 
 const divider: CSSProperties = { height: 1, background: "#eee", margin: "20px 0" };
 
+/** Small inline notice under the configurator (custom-size state, unavailable add-on). */
+const noteStyle = (background: string, border: string, color: string): CSSProperties => ({
+  marginTop: 14,
+  padding: "10px 13px",
+  background,
+  border: `1px solid ${border}`,
+  borderRadius: 8,
+  fontSize: 13.5,
+  lineHeight: 1.6,
+  color,
+});
+
 // Trust badges along the bottom of the card (presentational, static).
 const badges: { label: string; icon: ReactNode }[] = [
   {
@@ -140,11 +153,12 @@ function Chevron() {
  * payment (Grow) isn't wired up yet, submitting doesn't charge — it switches to
  * a confirmation view explaining payment is collected only after the job is
  * done, and offers a WhatsApp button pre-filled with the full order so the
- * buyer can hand it off in one tap. Selected size is shared via SizeProvider so
- * the description's dimensions block stays in sync.
+ * buyer can hand it off in one tap. The size list and selection come from
+ * SizeProvider so the description's dimensions block and the 3D planner stay in
+ * sync — and so a custom footprint designed in the CAD planner appears here as a
+ * seventh, sellable size.
  */
 export default function BuyPanel({
-  sizes,
   options,
   buyLabel,
   delivery,
@@ -153,7 +167,6 @@ export default function BuyPanel({
   askLabel,
   showTrustBadges = true,
 }: {
-  sizes: PricedShedSize[];
   options: Group[];
   buyLabel: string;
   delivery: string;
@@ -162,8 +175,7 @@ export default function BuyPanel({
   askLabel: string;
   showTrustBadges?: boolean;
 }) {
-  const { sizeIndex, setSizeIndex } = useSize();
-  const size = sizes[sizeIndex];
+  const { sizes, sizeIndex, setSizeIndex, size, customStatus } = useSize();
   const base = size.price;
   const title = productTitle(size.label);
 
@@ -177,20 +189,56 @@ export default function BuyPanel({
   const [error, setError] = useState<string | null>(null);
 
   // Some add-ons (pine-deck floor, delivery+install) are priced by footprint,
-  // not flat — their choice carries priceFromSize and the real price is
-  // derived from the selected size.
-  const effPrice = (c: Choice): number | null =>
-    c.priceFromSize === "floor"
-      ? floorPriceFor(size)
-      : c.priceFromSize === "deliveryInstall"
-        ? deliveryInstallPriceFor(size)
-        : c.price;
+  // not flat — their choice carries priceFromSize and the real price is derived
+  // from the selected size.
+  //
+  // `available` is NOT the same as "price is null": "ללא (איסוף עצמי)" is free
+  // (null price, available), while הובלה+הרכבה above the top competitor-verified
+  // tier has no price we can stand behind and is genuinely unavailable. Keeping
+  // them apart is what stops an unpriceable add-on from being sold for ₪0. Floor
+  // is a ₪/m² formula, so it holds for any footprint.
+  const resolve = useCallback(
+    (c: Choice): { price: number | null; available: boolean } => {
+      if (c.priceFromSize === "floor") {
+        return { price: floorPriceFor(size), available: true };
+      }
+      if (c.priceFromSize === "deliveryInstall") {
+        const p = deliveryInstallPriceFor(size);
+        return { price: p, available: p !== null };
+      }
+      return { price: c.price, available: true };
+    },
+    [size],
+  );
+
+  // A size change could in principle pull the floor out from under the current
+  // selection, so the effective choice is DERIVED rather than synced: an
+  // unavailable selection reads as that group's first choice — always the "ללא"
+  // one. Derived, so there is no window in which the displayed selection and the
+  // priced one disagree.
+  //
+  // Today nothing can actually be unavailable: CUSTOM_LIMITS.maxSqm is derived
+  // from the top install tier, so the storefront only ever offers a footprint it
+  // can price end to end. This guard is kept deliberately — it is what stops a
+  // ₪0 add-on from being sold if that ceiling is ever raised past the verified
+  // tiers.
+  const effSel = useMemo(
+    () => options.map((g, i) => {
+      const idx = sel[i] ?? 0;
+      const c = g.choices[idx];
+      return c && resolve(c).available ? idx : 0;
+    }),
+    [options, sel, resolve],
+  );
 
   const chosen = useMemo(
-    () => options.map((g, i) => g.choices[sel[i]] ?? g.choices[0]),
-    [options, sel],
+    () => options.map((g, i) => g.choices[effSel[i]] ?? g.choices[0]),
+    [options, effSel],
   );
-  const addons = chosen.reduce((s, c) => s + (effPrice(c) ?? 0), 0);
+  const addons = chosen.reduce((s, c) => {
+    const { price, available } = resolve(c);
+    return s + (available ? (price ?? 0) : 0);
+  }, 0);
   const newTotal = base + addons;
 
   const askWhatsappUrl = whatsappUrl("שלום, אשמח לקבל פרטים על " + title);
@@ -241,11 +289,22 @@ export default function BuyPanel({
     // configured or the gateway errors, surface a clear message.
     setLoading(true);
     try {
+      // A custom size carries its exact dimensions onto the order, so the build
+      // is made to what the customer designed in the planner rather than to a
+      // rounded label.
       const orderOptions = [
-        { label: "גודל", choice: `${size.label} מטר`, price: base },
+        {
+          label: "גודל",
+          choice: size.custom
+            ? `${size.label} מטר (מידה מותאמת מהמתכנן: ${size.widthCm}×${size.depthCm}×${heightOf(size)} ס"מ)`
+            : `${size.label} מטר`,
+          price: base,
+        },
         ...chosen.flatMap((c) => {
-          const p = effPrice(c);
-          return p != null ? [{ label: "תוספת", choice: c.label, price: p }] : [];
+          const { price, available } = resolve(c);
+          return available && price != null
+            ? [{ label: "תוספת", choice: c.label, price }]
+            : [];
         }),
       ];
       const res = await fetch("/api/checkout", {
@@ -324,7 +383,7 @@ export default function BuyPanel({
             >
               {sizes.map((s, j) => (
                 <option key={j} data-id={`size-option-${j}`} value={j}>
-                  {s.label} מטר — {ils(s.price)}
+                  {s.label} מטר{s.custom ? " (מידה שלכם)" : ""} — {ils(s.price)}
                 </option>
               ))}
             </select>
@@ -340,14 +399,24 @@ export default function BuyPanel({
                 data-id={`option-select-${i}`}
                 id={`config-option-${i}`}
                 style={selectStyle}
-                value={sel[i]}
+                value={effSel[i]}
                 onChange={(e) => setChoice(i, Number(e.target.value))}
               >
                 {g.choices.map((c, j) => {
-                  const p = effPrice(c);
+                  const { price, available } = resolve(c);
+                  const label = !available
+                    ? `${c.label} — לא זמין במידה זו`
+                    : price != null
+                      ? `${c.label} — ${ils(price)}`
+                      : c.label;
                   return (
-                    <option key={j} data-id={`option-${i}-choice-${j}`} value={j}>
-                      {p != null ? `${c.label} — ${ils(p)}` : c.label}
+                    <option
+                      key={j}
+                      data-id={`option-${i}-choice-${j}`}
+                      value={j}
+                      disabled={!available}
+                    >
+                      {label}
                     </option>
                   );
                 })}
@@ -357,6 +426,34 @@ export default function BuyPanel({
           </div>
         ))}
       </div>
+
+      {/* Round trip from the CAD planner: pricing state for a custom footprint,
+          and the one add-on a custom footprint can outgrow. */}
+      {customStatus.state === "loading" && (
+        <div data-id="custom-size-loading" style={noteStyle("#f5f7f8", "#d8dde0", "#666")}>
+          מתמחרים את המידות שתכננתם…
+        </div>
+      )}
+      {customStatus.state === "error" && (
+        <div data-id="custom-size-error" style={noteStyle("#fff6f6", "#f3d2d2", "#a33")}>
+          {customStatus.message}{" "}
+          <a
+            data-id="custom-size-error-whatsapp"
+            href={whatsappUrl("שלום, תכננתי מחסן במתכנן ואשמח לקבל הצעת מחיר למידות שלי.")}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{ color: ACCENT, fontWeight: 700 }}
+          >
+            דברו איתנו בוואטסאפ
+          </a>
+        </div>
+      )}
+      {size.custom && customStatus.state === "ready" && (
+        <div data-id="custom-size-note" style={noteStyle("#f2f8fd", "#cfe4f5", "#2a6a99")}>
+          זו המידה שתכננתם במתכנן — {size.widthCm}×{size.depthCm} ס&quot;מ, גובה {heightOf(size)} ס&quot;מ.
+          המחיר מחושב מרשימת החומרים המלאה של המבנה הזה.
+        </div>
+      )}
 
       {/* Primary lead CTA: one-tap WhatsApp with the configured product, no
           up-front payment. Fires the Google Ads Lead conversion on click so the
@@ -540,8 +637,9 @@ export default function BuyPanel({
                     <span data-id="summary-size-price" dir="ltr">{ils(base)}</span>
                   </div>
                   {chosen.map((c, i) => {
-                    const p = effPrice(c);
+                    const { price: p, available } = resolve(c);
                     return (
+                      available &&
                       p != null && (
                         <div key={i} data-id={`summary-row-${i}`} style={{ display: "flex", justifyContent: "space-between", gap: 12 }}>
                           <span data-id={`summary-choice-label-${i}`}>{c.label}</span>
