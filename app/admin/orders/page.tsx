@@ -91,7 +91,20 @@ export default async function AdminOrdersPage({
                     <td style={cell}>{o.name}</td>
                     <td style={cell} dir="ltr">
                       <a data-id="admin-order-phone" href={`tel:${o.phone}`} style={{ color: "#2f8fd6", textDecoration: "none" }}>{o.phone}</a>
-                      {o.email ? <div style={{ color: "#888", fontSize: 12 }}>{o.email}</div> : null}
+                      {o.email ? (
+                        <div style={{ color: "#888", fontSize: 12 }}>
+                          {o.email}
+                          {/* Only a positive claim: the badge means the buyer typed
+                              back a code we mailed there. No badge is not a claim
+                              that the address is fake — orders from before
+                              verification existed simply have no proof either way. */}
+                          {o.emailVerified ? (
+                            <span data-id="admin-order-email-verified" title="הכתובת אומתה בקוד" style={{ color: "#1e9e54", marginInlineStart: 4 }}>
+                              ✓
+                            </span>
+                          ) : null}
+                        </div>
+                      ) : null}
                     </td>
                     <td style={cell}>{o.title}</td>
                     <td style={{ ...cell, fontWeight: 700 }} dir="ltr">{ils(o.paidSum ?? o.totalIls)}</td>

@@ -17,6 +17,15 @@ business id + OTP — no Grow credentials in this repo), and answers synchronous
 
 Flow (all server-side):
 1. `app/_components/buy-panel.tsx` → POST `/api/checkout` (name + Israeli mobile + optional email).
+   The email is **optional but never unverified**: if the buyer types one, the form
+   mails a 6-digit code (`/api/checkout/verify-email` → `lib/emailVerification.ts`)
+   and `/api/checkout` re-checks the token+code server-side before attaching the
+   address, so `order.email` is either verified (`emailVerified: true`) or absent.
+   Grow refuses a payment page without a syntactically valid email (427), so when
+   the buyer gives none it receives `order-<id>@ya-niv.com` — ours, unrouted,
+   never used to reach the buyer. This replaced the old mandatory-email rule
+   (commit 214275f): demanding identity before showing a payment page is what made
+   a real ad-clicking visitor type `2435234k@gmail.com` on 2026-07-19 and leave.
 2. `app/api/checkout/route.ts` persists a `pending` order (`lib/orders.ts`, `data/orders.json`,
    gitignored) and calls `createPaymentLink` (`lib/growMake.ts`) → returns Grow's hosted-page
    URL (pay.grow.link); the browser is redirected there to pay.

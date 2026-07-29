@@ -29,6 +29,13 @@ export type Order = {
   totalIls: number | null;
   options: OrderLine[];
   paymentStatus: PaymentStatus;
+  /**
+   * True when the buyer proved the address by typing back a code we mailed to
+   * it. Absent means they simply didn't give one — the field is optional. An
+   * unverified address is never written here, so any `email` on an order is
+   * either verified or came from Grow's payer record.
+   */
+  emailVerified?: boolean;
   // Grow/Meshulam payment-process linkage (set at create time).
   processId?: string;
   processToken?: string;

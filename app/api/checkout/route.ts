@@ -1,15 +1,19 @@
 import { NextResponse, after } from "next/server";
 import { appendOrder, updateOrder, type Order, type OrderLine } from "@/lib/orders";
 import { growMakeConfig, createPaymentLink } from "@/lib/growMake";
-import { isValidIsraeliMobile, isValidEmail, normalizeIsraeliPhone } from "@/lib/meshulam";
+import { isValidIsraeliMobile, normalizeIsraeliPhone } from "@/lib/meshulam";
 import { notifyOwner } from "@/lib/notify";
+import { isPlausibleEmail, normalizeEmail, verifyCode } from "@/lib/emailVerification";
 
 export const runtime = "nodejs";
 
 type CheckoutPayload = {
   name?: string;
   phone?: string;
+  /** Optional. If present it must come with a token+code proving it exists. */
   email?: string;
+  emailToken?: string;
+  emailCode?: string;
   notes?: string;
   title?: string;
   totalIls?: number;
@@ -54,7 +58,7 @@ export async function POST(request: Request) {
 
   const name = (body.name ?? "").trim();
   const phone = (body.phone ?? "").trim();
-  const email = (body.email ?? "").trim();
+  const email = normalizeEmail(body.email ?? "");
 
   if (name.split(/\s+/).filter(Boolean).length < 2) {
     return NextResponse.json({ ok: false, error: "name_two_words" }, { status: 400 });
@@ -62,10 +66,24 @@ export async function POST(request: Request) {
   if (!isValidIsraeliMobile(phone)) {
     return NextResponse.json({ ok: false, error: "bad_phone" }, { status: 400 });
   }
-  // Grow rejects a payment page with a blank/invalid email (427) — require it
-  // here so the buyer gets a clear error instead of a downstream gateway_error.
-  if (!isValidEmail(email)) {
-    return NextResponse.json({ ok: false, error: "bad_email" }, { status: 400 });
+
+  // The email is OPTIONAL — but if one is given it must have proved it can
+  // receive mail, by way of a code we sent to it. An address that hasn't is
+  // rejected outright rather than stored unproven: a fake address on an order
+  // is worse than no address, because it looks like a way to reach the buyer.
+  // The proof is re-checked here against the server's own store; the client's
+  // claim that it verified counts for nothing.
+  if (email) {
+    if (!isPlausibleEmail(email)) {
+      return NextResponse.json({ ok: false, error: "bad_email" }, { status: 400 });
+    }
+    const check = verifyCode(body.emailToken ?? "", body.emailCode ?? "", email);
+    if (!check.ok) {
+      return NextResponse.json(
+        { ok: false, error: "email_not_verified", reason: check.error },
+        { status: 400 },
+      );
+    }
   }
   const total = typeof body.totalIls === "number" ? body.totalIls : NaN;
   if (!Number.isFinite(total) || total <= 0) {
@@ -83,6 +101,8 @@ export async function POST(request: Request) {
     totalIls: total,
     options: Array.isArray(body.options) ? body.options : [],
     paymentStatus: "pending",
+    // Only ever true — an unverified address never reaches this point.
+    emailVerified: email ? true : undefined,
   };
 
   await appendOrder(order);
@@ -94,7 +114,11 @@ export async function POST(request: Request) {
       description: order.title || "מחסן פאנל",
       fullName: name,
       phone,
-      email: email || undefined,
+      // Grow refuses a payment page without a syntactically valid email (427).
+      // When the buyer chose not to give one, it gets an address of ours that
+      // names the order — never an invented buyer address. Nothing is sent to
+      // it; the buyer's receipt is Grow's own confirmation screen.
+      email: email || `order-${order.id}@ya-niv.com`,
       orderId: order.id,
       origin,
     });

@@ -36,9 +36,6 @@ const normalizePhone = (raw: string) => {
   return d;
 };
 const isValidMobile = (raw: string) => /^05\d{8}$/.test(normalizePhone(raw));
-/** Grow requires a valid email on the payment page (blank → 427), so it's
- *  mandatory at checkout — it's also where Grow sends the receipt. */
-const isValidEmail = (raw: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(raw.trim());
 
 const selectStyle: CSSProperties = {
   width: "100%",
@@ -188,6 +185,60 @@ export default function BuyPanel({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Email is optional, but an address that IS given has to prove it exists — we
+  // mail it a code and the buyer types it back. The code is checked server-side
+  // during checkout itself (one round trip, and the proof is consumed at the
+  // only moment it matters); the client just carries the token.
+  const [emailToken, setEmailToken] = useState<string | null>(null);
+  const [emailCode, setEmailCode] = useState("");
+  const [sendingCode, setSendingCode] = useState(false);
+  const [emailNote, setEmailNote] = useState<string | null>(null);
+
+  const emailTouched = email.trim() !== "";
+
+  /** Editing the address invalidates any code already sent to the old one. */
+  function changeEmail(next: string) {
+    setEmail(next);
+    setEmailToken(null);
+    setEmailCode("");
+    setEmailNote(null);
+  }
+
+  /** Mail a verification code to whatever the buyer typed. */
+  async function requestEmailCode() {
+    setError(null);
+    setEmailNote(null);
+    setSendingCode(true);
+    try {
+      const res = await fetch("/api/checkout/verify-email", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: email.trim() }),
+      });
+      const data = (await res.json()) as { ok?: boolean; token?: string; error?: string };
+      if (data.ok && data.token) {
+        setEmailToken(data.token);
+        setEmailNote("שלחנו קוד בן 6 ספרות לכתובת. בדקו גם בספאם.");
+      } else {
+        setEmailToken(null);
+        setEmailNote(
+          data.error === "bad_email"
+            ? "הכתובת אינה תקינה."
+            : data.error === "no_such_domain"
+              ? "לא קיים שרת דואר לכתובת הזו — בדקו את האיות."
+              : data.error === "too_many_sends"
+                ? "נשלחו כבר כמה קודים לכתובת הזו. נסו שוב בעוד כמה דקות."
+                : "לא הצלחנו לשלוח את הקוד כרגע. אפשר להמשיך גם בלי אימייל — מחקו את השדה.",
+        );
+      }
+    } catch {
+      setEmailToken(null);
+      setEmailNote("לא הצלחנו לשלוח את הקוד כרגע. אפשר להמשיך גם בלי אימייל — מחקו את השדה.");
+    } finally {
+      setSendingCode(false);
+    }
+  }
+
   // Some add-ons (pine-deck floor, delivery+install) are priced by footprint,
   // not flat — their choice carries priceFromSize and the real price is derived
   // from the selected size.
@@ -277,10 +328,15 @@ export default function BuyPanel({
     // name+phone so we still capture the lead even if the email step stops here.
     reportLead({ value: newTotal });
 
-    // Grow rejects a payment page with a blank/invalid email (427), so it's
-    // required to proceed to payment — and it's where the receipt is sent.
-    if (!isValidEmail(email)) {
-      setError("נא למלא כתובת אימייל תקינה — לשליחת הקבלה");
+    // The email is optional. But a buyer who typed one must have proved it —
+    // an address nobody can reach is worse than none, because it looks like a
+    // way to contact them. Leaving the field empty is always a valid answer.
+    if (emailTouched && (!emailToken || emailCode.trim().length !== 6)) {
+      setError(
+        emailToken
+          ? "נא להזין את קוד האימות בן 6 הספרות שנשלח לאימייל (או למחוק את שדה האימייל)"
+          : "נא לאמת את כתובת האימייל, או למחוק את השדה ולהמשיך בלעדיו",
+      );
       return;
     }
 
@@ -314,6 +370,8 @@ export default function BuyPanel({
           name: name.trim(),
           phone: phone.trim(),
           email: email.trim(),
+          emailToken: emailToken ?? "",
+          emailCode: emailCode.trim(),
           notes: notes.trim(),
           title,
           totalIls: newTotal,
@@ -333,7 +391,9 @@ export default function BuyPanel({
       setError(
         data.error === "payments_not_configured"
           ? "התשלום אינו זמין כרגע. נסו שוב מאוחר יותר או פנו אלינו בוואטסאפ."
-          : "אירעה שגיאה בתהליך התשלום. נסו שוב או פנו אלינו בוואטסאפ.",
+          : data.error === "email_not_verified"
+            ? "קוד האימות שגוי או פג תוקף. בקשו קוד חדש, או מחקו את שדה האימייל והמשיכו בלעדיו."
+            : "אירעה שגיאה בתהליך התשלום. נסו שוב או פנו אלינו בוואטסאפ.",
       );
     } catch {
       setLoading(false);
@@ -677,17 +737,63 @@ export default function BuyPanel({
                       inputMode="tel"
                       style={inputStyle}
                     />
-                    <input
-                      data-id="order-email"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      placeholder="אימייל (לקבלה) *"
-                      aria-label="אימייל"
-                      aria-required="true"
-                      inputMode="email"
-                      type="email"
-                      style={inputStyle}
-                    />
+                    <div data-id="order-email-block" style={{ marginBottom: 10 }}>
+                      <div style={{ display: "flex", gap: 8 }}>
+                        <input
+                          data-id="order-email"
+                          value={email}
+                          onChange={(e) => changeEmail(e.target.value)}
+                          placeholder="אימייל (לא חובה — לקבלה)"
+                          aria-label="אימייל (לא חובה)"
+                          inputMode="email"
+                          type="email"
+                          style={{ ...inputStyle, marginBottom: 0 }}
+                        />
+                        {emailTouched && (
+                          <button
+                            type="button"
+                            data-id="order-email-send-code"
+                            onClick={requestEmailCode}
+                            disabled={sendingCode}
+                            style={{
+                              flexShrink: 0,
+                              background: "#fff",
+                              color: ACCENT,
+                              border: `1px solid ${ACCENT}`,
+                              borderRadius: 7,
+                              padding: "0 12px",
+                              fontSize: 13,
+                              fontWeight: 700,
+                              fontFamily: "inherit",
+                              cursor: sendingCode ? "not-allowed" : "pointer",
+                              opacity: sendingCode ? 0.6 : 1,
+                              whiteSpace: "nowrap",
+                            }}
+                          >
+                            {sendingCode ? "שולח…" : emailToken ? "שלחו שוב" : "שלחו קוד"}
+                          </button>
+                        )}
+                      </div>
+                      {emailToken && (
+                        <input
+                          data-id="order-email-code"
+                          value={emailCode}
+                          onChange={(e) =>
+                            setEmailCode(e.target.value.replace(/\D/g, "").slice(0, 6))
+                          }
+                          placeholder="קוד אימות בן 6 ספרות"
+                          aria-label="קוד אימות"
+                          inputMode="numeric"
+                          dir="ltr"
+                          style={{ ...inputStyle, marginTop: 8, marginBottom: 0, letterSpacing: 3 }}
+                        />
+                      )}
+                      {emailNote && (
+                        <p data-id="order-email-note" style={{ fontSize: 12, color: "#777", margin: "6px 0 0", lineHeight: 1.5 }}>
+                          {emailNote}
+                        </p>
+                      )}
+                    </div>
                     <textarea
                       data-id="order-notes"
                       value={notes}
