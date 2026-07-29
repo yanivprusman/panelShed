@@ -1,7 +1,8 @@
-import { NextResponse } from "next/server";
+import { NextResponse, after } from "next/server";
 import { appendOrder, updateOrder, type Order, type OrderLine } from "@/lib/orders";
 import { growMakeConfig, createPaymentLink } from "@/lib/growMake";
 import { isValidIsraeliMobile, isValidEmail, normalizeIsraeliPhone } from "@/lib/meshulam";
+import { notifyOwner } from "@/lib/notify";
 
 export const runtime = "nodejs";
 
@@ -101,10 +102,18 @@ export async function POST(request: Request) {
       processId: proc.processId,
       processToken: proc.processToken,
     });
+    // Alert AFTER the response: the customer's redirect to the payment page must
+    // not wait on two execOnPeer round-trips to the leader.
+    after(() => notifyOwner(order, "submitted"));
     return NextResponse.json({ ok: true, orderId: order.id, redirectUrl: proc.url });
   } catch (e) {
     console.error("[checkout] createPaymentLink failed", e);
-    await updateOrder(order.id, { paymentStatus: "failed", failedAt: new Date().toISOString() });
+    const failedAt = new Date().toISOString();
+    await updateOrder(order.id, { paymentStatus: "failed", failedAt });
+    // The customer is about to see an error. This alert is the only reason
+    // anyone will know they exist — it replaces the "submitted" one, so a
+    // failed checkout raises exactly one message, not two.
+    after(() => notifyOwner({ ...order, paymentStatus: "failed", failedAt }, "failed"));
     return NextResponse.json({ ok: false, error: "gateway_error" }, { status: 502 });
   }
 }

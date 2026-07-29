@@ -1,6 +1,6 @@
-import { NextResponse } from "next/server";
+import { NextResponse, after } from "next/server";
 import { findOrderByProcessToken, updateOrder } from "@/lib/orders";
-import { notifyOwnerPaid } from "@/lib/notify";
+import { notifyOwner } from "@/lib/notify";
 
 export const runtime = "nodejs";
 
@@ -148,14 +148,18 @@ export async function POST(request: Request) {
       });
       console.log(`[checkout/callback] order ${order.id} PAID ₪${sum}`);
       // Notify the owner (best-effort; never blocks/fails the paid confirmation).
-      if (updated) await notifyOwnerPaid(updated);
+      if (updated) await notifyOwner(updated, "paid");
     }
     return NextResponse.json({ ok: true });
   }
 
-  // Not a paid status (declined / cancelled). Record it, don't fulfil.
+  // Not a paid status (declined / cancelled). Record it, don't fulfil — and
+  // tell the owner: a customer whose card was declined on a ₪4k–9k purchase is
+  // the hottest lead the site produces, and used to vanish silently.
   if (order.paymentStatus === "pending") {
-    await updateOrder(order.id, { paymentStatus: "failed", failedAt: new Date().toISOString() });
+    const failedAt = new Date().toISOString();
+    const updated = await updateOrder(order.id, { paymentStatus: "failed", failedAt });
+    if (updated) after(() => notifyOwner(updated, "failed"));
   }
   console.log(
     `[checkout/callback] order ${order.id} not paid (statusCode=${statusCode || statusText})`,
