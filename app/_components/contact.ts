@@ -23,6 +23,21 @@ export const EMAIL = "yanivprusman@gmail.com";
 export const MAIL_URL = `mailto:${EMAIL}`;
 
 /**
+ * Where internal order alerts are sent. Deliberately NOT the public EMAIL
+ * above: Brevo (the SMTP relay every ya-niv.com notification goes through) has
+ * the bare address on its suppression list, so it answers "250 queued" and
+ * silently discards the message — verified 2026-07-29, the last alert that
+ * actually landed was 2026-07-24 11:28. The +panelshed alias is a distinct
+ * recipient as far as the suppression list is concerned, delivers to the same
+ * inbox, and doubles as a filter handle.
+ *
+ * Once the address is cleared from the Brevo blocklist this can go back to
+ * EMAIL — but until then, pointing alerts at the suppressed address means no
+ * alerts at all.
+ */
+export const ALERT_EMAIL = "yanivprusman+panelshed@gmail.com";
+
+/**
  * Accessibility coordinator (רכז נגישות) published in the legally-required
  * הצהרת נגישות (accessibility statement) per Israeli Standard 5568 / the
  * Equal Rights for Persons with Disabilities (Service Accessibility) Regulations.

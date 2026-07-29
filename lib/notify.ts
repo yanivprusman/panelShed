@@ -1,6 +1,6 @@
 import "server-only";
 import { sendDaemonCommand } from "@/lib/daemon";
-import { EMAIL } from "@/app/_components/contact";
+import { ALERT_EMAIL } from "@/app/_components/contact";
 import type { Order } from "@/lib/orders";
 
 const ils = (n: number | null | undefined) =>
@@ -116,7 +116,7 @@ function buildMime(to: string, subject: string, body: string): string {
 
 /** Email the owner via the daemon → NUC msmtp (Brevo). */
 async function emailOwner(order: Order, event: OrderEvent): Promise<void> {
-  const mime = buildMime(EMAIL, EVENTS[event].subject(order), orderBody(order, event));
+  const mime = buildMime(ALERT_EMAIL, EVENTS[event].subject(order), orderBody(order, event));
   const transport = Buffer.from(mime, "utf8").toString("base64");
   const shellCmd = `printf %s '${transport}' | base64 -d | msmtp -t`;
   await sendDaemonCommand({
