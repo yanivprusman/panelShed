@@ -92,7 +92,7 @@ export const CUSTOM_LIMITS = {
 };
 
 /** Meters, trimmed: 250 → "2.5", 300 → "3". */
-const metersLabel = (cm: number) => String(Number((cm / 100).toFixed(2)));
+export const metersLabel = (cm: number) => String(Number((cm / 100).toFixed(2)));
 
 export const customSizeLabel = (widthCm: number, depthCm: number) =>
   `${metersLabel(widthCm)}x${metersLabel(depthCm)}`;

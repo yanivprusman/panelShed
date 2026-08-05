@@ -2,6 +2,7 @@
 
 import {
   createContext,
+  useCallback,
   useContext,
   useEffect,
   useMemo,
@@ -9,16 +10,30 @@ import {
   type ReactNode,
 } from "react";
 import type { PricedShedSize } from "./sizes";
+import {
+  CONFIG_PARAM,
+  decodeConfig,
+  plannerUrl as buildPlannerUrl,
+  type OptionGroup,
+} from "./planner";
 
 /**
- * Shares the selected shed size across the page so the config panel (price +
- * title), the dimensions block and the 3D planner embed stay in sync from one
- * source — including a custom size designed in the CAD planner.
+ * The one source of the visitor's configuration — selected shed and add-ons —
+ * shared by the buy panel (price + title), the dimensions block and the 3D
+ * planner embed, so they can never disagree.
  *
- * `sizes` starts as the six server-priced catalogue SKUs and gains a seventh,
- * auto-selected entry when the visitor arrives back from the planner with
- * /?width=&length=&height=. That custom size is priced by /api/custom-quote
- * (which asks CAD for a real bill of materials), never by this component.
+ * The storefront sells two things, and the size selector offers exactly those:
+ *
+ *   standard — the catalogue shed. Normally the 2x2; a Shopping ad or the
+ *              Merchant feed can deep-link another SKU with /?size=<label>,
+ *              and then THAT one is the standard on this visit (the visible
+ *              price has to equal the feed's, or Google disapproves the item).
+ *   custom   — a footprint the visitor designed in the CAD planner and came
+ *              back with (/?width=&length=&height=), priced live by
+ *              /api/custom-quote from CAD's real bill of materials.
+ *
+ * Both legs of that planner trip also carry `cfg`, the whole configurator state
+ * (see ./planner.ts), so add-on selections survive the detour.
  */
 type CustomStatus =
   | { state: "none" }
@@ -26,102 +41,137 @@ type CustomStatus =
   | { state: "ready" }
   | { state: "error"; message: string };
 
+export type SizeMode = "standard" | "custom";
+
 type SizeCtx = {
-  sizes: PricedShedSize[];
-  sizeIndex: number;
-  setSizeIndex: (i: number) => void;
+  /** The catalogue shed on offer this visit. */
+  standard: PricedShedSize;
+  /** The planner-designed shed, once priced. Null until then. */
+  custom: PricedShedSize | null;
+  mode: SizeMode;
+  setMode: (m: SizeMode) => void;
+  /** The shed actually being sold right now. */
   size: PricedShedSize;
   customStatus: CustomStatus;
+  options: OptionGroup[];
+  /** Chosen choice index per option group. */
+  sel: number[];
+  setChoice: (groupIdx: number, choiceIdx: number) => void;
+  /** Full planner deep-link for the current configuration (the outbound leg). */
+  plannerUrl: string;
 };
 
 const Ctx = createContext<SizeCtx | null>(null);
 
 export function SizeProvider({
   sizes: catalogue,
+  options,
   children,
 }: {
   sizes: PricedShedSize[];
+  options: OptionGroup[];
   children: ReactNode;
 }) {
-  const [sizeIndex, setSizeIndex] = useState(0);
+  const [standardIndex, setStandardIndex] = useState(0);
+  const [mode, setMode] = useState<SizeMode>("standard");
   const [custom, setCustom] = useState<PricedShedSize | null>(null);
   const [customStatus, setCustomStatus] = useState<CustomStatus>({ state: "none" });
+  const [sel, setSel] = useState<number[]>(() => options.map(() => 0));
 
-  const sizes = useMemo(
-    () => (custom ? [...catalogue, custom] : catalogue),
-    [catalogue, custom],
-  );
+  const setChoice = useCallback((groupIdx: number, choiceIdx: number) => {
+    setSel((prev) => prev.map((v, i) => (i === groupIdx ? choiceIdx : v)));
+  }, []);
 
   // Deep-link support, applied after mount to avoid an SSR/CSR hydration
   // mismatch (Googlebot renders JS, so it still sees the final price):
   //
   //   /?size=<label>            — a catalogue SKU, from the Merchant feed or a
-  //                               Shopping ad. The visible price must match the
-  //                               feed, or Google disapproves the item.
+  //                               Shopping ad.
   //   /?width=&length=&height=  — a footprint designed in the CAD planner,
   //                               coming back here to be bought. Priced live.
+  //   /?cfg=…                   — the configuration this visitor left with,
+  //                               echoed back by the planner. Restored on both
+  //                               of the above (see ./planner.ts).
   //
-  // width/length win when both are present: the visitor just designed that
-  // shed, so it's the more specific intent.
+  // width/length win over size when both are present: the visitor just designed
+  // that shed, so it's the more specific intent.
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    const width = params.get("width");
-    const length = params.get("length");
 
-    if (width && length) {
-      const query = new URLSearchParams({ width, length });
-      const height = params.get("height");
-      if (height) query.set("height", height);
-
-      let cancelled = false;
-      // Kicking off external work on mount — and the visitor must see that we're
-      // pricing their design rather than a stale 2x2 for the second or two the
-      // CAD quote takes.
+    // Everything the customer had configured before the planner detour.
+    const config = decodeConfig(options, params.get(CONFIG_PARAM));
+    if (config) {
       // eslint-disable-next-line react-hooks/set-state-in-effect
-      setCustomStatus({ state: "loading" });
-      fetch(`/api/custom-quote?${query.toString()}`)
-        .then(async (res) => {
-          const data = await res.json();
-          if (cancelled) return;
-          if (data.ok) {
-            // Select it in the same update that adds it — it's what the visitor
-            // came back to buy, and folding the two together avoids a render
-            // where the custom size exists but isn't chosen.
-            setCustom(data.size);
-            setSizeIndex(catalogue.length);
-            setCustomStatus({ state: "ready" });
-          } else {
-            setCustomStatus({ state: "error", message: data.message });
-          }
-        })
-        .catch(() => {
-          if (cancelled) return;
-          setCustomStatus({
-            state: "error",
-            message:
-              "לא הצלחנו לתמחר את המידות האלה כרגע. נסו שוב עוד רגע או דברו איתנו בוואטסאפ.",
-          });
-        });
-      return () => {
-        cancelled = true;
-      };
+      setSel(config.sel);
     }
 
-    const label = params.get("size");
-    if (!label) return;
-    const i = catalogue.findIndex((s) => s.label === label);
-    if (i >= 0) setSizeIndex(i);
-  }, [catalogue]);
+    // The catalogue SKU: an explicit ?size= wins, otherwise the one carried
+    // through the round trip, so returning from the planner and switching back
+    // to "standard" lands on the shed they started from.
+    const label = params.get("size") ?? config?.sizeLabel;
+    if (label) {
+      const i = catalogue.findIndex((s) => s.label === label);
+      if (i >= 0) setStandardIndex(i);
+    }
+
+    const width = params.get("width");
+    const length = params.get("length");
+    if (!width || !length) return;
+
+    const query = new URLSearchParams({ width, length });
+    const height = params.get("height");
+    if (height) query.set("height", height);
+
+    let cancelled = false;
+    // Kicking off external work on mount — and the visitor must see that we're
+    // pricing their design rather than a stale standard shed for the second or
+    // two the CAD quote takes.
+    setCustomStatus({ state: "loading" });
+    setMode("custom");
+    fetch(`/api/custom-quote?${query.toString()}`)
+      .then(async (res) => {
+        const data = await res.json();
+        if (cancelled) return;
+        if (data.ok) {
+          setCustom(data.size);
+          setCustomStatus({ state: "ready" });
+        } else {
+          setCustomStatus({ state: "error", message: data.message });
+        }
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setCustomStatus({
+          state: "error",
+          message:
+            "לא הצלחנו לתמחר את המידות האלה כרגע. נסו שוב עוד רגע או דברו איתנו בוואטסאפ.",
+        });
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [catalogue, options]);
+
+  const standard = catalogue[standardIndex] ?? catalogue[0];
+  // "custom" only sells a shed once it has a real price; until then (loading, or
+  // a quote we couldn't get) the standard shed is what's priced on the card,
+  // while the selector still shows the custom row plus its status note.
+  const size = mode === "custom" && custom ? custom : standard;
 
   const value = useMemo<SizeCtx>(
     () => ({
-      sizes,
-      sizeIndex,
-      setSizeIndex,
-      size: sizes[sizeIndex] ?? sizes[0],
+      standard,
+      custom,
+      mode,
+      setMode,
+      size,
       customStatus,
+      options,
+      sel,
+      setChoice,
+      plannerUrl: buildPlannerUrl(size, options, { sizeLabel: standard.label, sel }),
     }),
-    [sizes, sizeIndex, customStatus],
+    [standard, custom, mode, size, customStatus, options, sel, setChoice],
   );
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;

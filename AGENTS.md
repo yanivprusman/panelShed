@@ -89,3 +89,36 @@ Google Merchant Center (account 5823015132, ג.ח. פרוייקטים) is fully 
 feed `/merchant-feed` (carries `g:shipping` ₪450/IL), account shipping = flat ₪450,
 delivery 8–21 business days, return policy = `/returns` page (14 days, ₪100 restocking
 fee, buyer pays transport both ways, In-store method).
+
+# Size selector = standard ⟷ custom (2026-08-05)
+
+The `גודל` dropdown offers exactly **two** rows, and this is deliberate — do not
+re-add a list of catalogue SKUs to it:
+
+1. **מידה סטנדרטית** — the catalogue shed, labelled with its footprint AND its
+   height (`2×2 מטר · גובה 2.2 מטר`), because a shed is a volume and the height
+   used to appear only in the description block far below the fold. Normally the
+   2x2; `/?size=<label>` (Merchant feed, Shopping ads) makes that SKU the
+   standard for the visit, so feed price == landing-page price still holds and
+   `/merchant-feed` keeps listing every SKU.
+2. **מידה מותאמת אישית** — selecting it before anything is designed navigates to
+   the CAD planner; after a round trip it *is* the designed shed, priced live by
+   `/api/custom-quote`.
+
+## The planner round trip carries the whole configuration
+
+`_components/planner.ts` owns both legs. The outbound planner link carries
+`cfg=` — a URL-encoded sub-query (`v=1&size=2x2&delivery=…&floor=…`) naming the
+active SKU and every add-on choice **by stable id**. CAD treats `cfg` as opaque:
+it stores nothing, parses nothing, and echoes it back on its "order these
+dimensions" link (`cad/web/lib/storefront-url.ts`, `STOREFRONT_CONFIG_PARAM`).
+`SizeProvider` restores it on arrival, so a customer who had already picked
+הובלה והרכבה + במת דק comes back to a configured card instead of an empty one.
+
+The `id`s on `product.options` in `app/page.tsx` travel in customer-facing URLs —
+rename a **label** freely, never an **id** (a rename strands anyone mid-trip; the
+version prefix makes a mismatch ignore the whole `cfg` rather than half-apply it).
+
+All configurator state (selected shed, add-on choices, planner URL) lives in
+`SizeProvider` — `BuyPanel`, `ProductDims` and `Product3D` all read it from
+there, so they cannot disagree.

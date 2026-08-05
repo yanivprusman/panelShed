@@ -15,16 +15,10 @@ import {
   deliveryInstallPriceFor,
   heightOf,
 } from "./sizes";
+import { sizeSummary, type OptionChoice as Choice } from "./planner";
 import { whatsappUrl } from "./contact";
 import { WhatsAppIcon, CheckIcon } from "./icons";
 import { reportLead } from "@/lib/gtag";
-
-type Choice = {
-  label: string;
-  price: number | null;
-  priceFromSize?: "floor" | "deliveryInstall";
-};
-type Group = { label: string; choices: Choice[] };
 
 const ils = (n: number) => `₪ ${n.toLocaleString("he-IL")}`;
 const ACCENT = "#2f8fd6";
@@ -143,20 +137,22 @@ function Chevron() {
 /**
  * The full purchase card: title, live price, size + add-on dropdowns, buy
  * button, delivery note, trust points/badges and an "ask on WhatsApp" link —
- * all in one bordered card (per the imported design). A size selector drives
- * the base price and reactive title; delivery/floor dropdowns add surcharges;
- * the total updates live. "קנה עכשיו" opens an order modal (name + mobile +
- * optional email + notes). While the site is under construction and online
- * payment (Grow) isn't wired up yet, submitting doesn't charge — it switches to
- * a confirmation view explaining payment is collected only after the job is
- * done, and offers a WhatsApp button pre-filled with the full order so the
- * buyer can hand it off in one tap. The size list and selection come from
- * SizeProvider so the description's dimensions block and the 3D planner stay in
- * sync — and so a custom footprint designed in the CAD planner appears here as a
- * seventh, sellable size.
+ * all in one bordered card (per the imported design).
+ *
+ * The size selector offers exactly two sheds, because that is what the shop
+ * sells: the standard one (dimensions AND height spelled out — a shed is a
+ * volume, and a buyer who only ever sees "2x2" is being told two thirds of the
+ * product), or the one they design themselves in the planner. Choosing the
+ * custom row before designing anything takes them to the planner and back.
+ * Delivery/floor dropdowns add surcharges; the total updates live. "קנה עכשיו"
+ * opens an order modal (name + mobile + optional email + notes) and hands off to
+ * Grow's hosted payment page.
+ *
+ * All of the configurator's state lives in SizeProvider, so the description's
+ * dimensions block, the 3D planner embed and the planner round trip stay in
+ * sync with this card from one source.
  */
 export default function BuyPanel({
-  options,
   buyLabel,
   delivery,
   trustTitle,
@@ -164,7 +160,6 @@ export default function BuyPanel({
   askLabel,
   showTrustBadges = true,
 }: {
-  options: Group[];
   buyLabel: string;
   delivery: string;
   trustTitle: string;
@@ -172,11 +167,21 @@ export default function BuyPanel({
   askLabel: string;
   showTrustBadges?: boolean;
 }) {
-  const { sizes, sizeIndex, setSizeIndex, size, customStatus } = useSize();
+  const {
+    standard,
+    custom,
+    mode,
+    setMode,
+    size,
+    customStatus,
+    options,
+    sel,
+    setChoice,
+    plannerUrl,
+  } = useSize();
   const base = size.price;
   const title = productTitle(size.label);
 
-  const [sel, setSel] = useState<number[]>(() => options.map(() => 0));
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
@@ -294,9 +299,25 @@ export default function BuyPanel({
 
   const askWhatsappUrl = whatsappUrl("שלום, אשמח לקבל פרטים על " + title);
 
-  function setChoice(groupIdx: number, choiceIdx: number) {
-    setSel((prev) => prev.map((v, i) => (i === groupIdx ? choiceIdx : v)));
+  /**
+   * The size selector. Picking "custom" before anything has been designed is a
+   * request to design it: we hand the visitor to the planner in this same tab,
+   * carrying the whole configuration, and CAD's "order these dimensions" brings
+   * both the footprint and the configuration back here.
+   */
+  function changeSize(next: string) {
+    if (next === "custom" && !custom) {
+      window.location.href = plannerUrl;
+      return;
+    }
+    setMode(next === "custom" ? "custom" : "standard");
   }
+
+  const customOptionLabel = custom
+    ? `המידה שלכם · ${sizeSummary(custom)} — ${ils(custom.price)}`
+    : customStatus.state === "loading"
+      ? "המידה שלכם — מתמחרים…"
+      : "מידה מותאמת אישית — לתכנון במתכנן ›";
 
   function closeModal() {
     setOpen(false);
@@ -431,24 +452,30 @@ export default function BuyPanel({
 
       {/* Size + add-on dropdowns — drive the live total */}
       <div data-id="config-grid" className="config-grid">
-        <div data-id="size-field">
+        <div data-id="size-field" className="config-size-field">
           <label data-id="size-label" htmlFor="config-size" style={labelStyle}>גודל</label>
           <div data-id="size-select-wrap" style={{ position: "relative" }}>
             <select
               data-id="select-size"
               id="config-size"
               style={selectStyle}
-              value={sizeIndex}
-              onChange={(e) => setSizeIndex(Number(e.target.value))}
+              value={mode}
+              onChange={(e) => changeSize(e.target.value)}
             >
-              {sizes.map((s, j) => (
-                <option key={j} data-id={`size-option-${j}`} value={j}>
-                  {s.label} מטר{s.custom ? " (מידה שלכם)" : ""} — {ils(s.price)}
-                </option>
-              ))}
+              <option data-id="size-option-standard" value="standard">
+                מידה סטנדרטית · {sizeSummary(standard)} — {ils(standard.price)}
+              </option>
+              <option data-id="size-option-custom" value="custom">
+                {customOptionLabel}
+              </option>
             </select>
             <Chevron />
           </div>
+          {/* The shed is a volume — height belongs on screen next to the
+              footprint, not only in the description block far below. */}
+          <p data-id="size-dims-note" style={{ margin: "7px 0 0", fontSize: 13, color: "#777" }}>
+            {`רוחב ${size.widthCm} ס"מ · עומק ${size.depthCm} ס"מ · גובה ${heightOf(size)} ס"מ`}
+          </p>
         </div>
 
         {options.map((g, i) => (
@@ -510,8 +537,15 @@ export default function BuyPanel({
       )}
       {size.custom && customStatus.state === "ready" && (
         <div data-id="custom-size-note" style={noteStyle("#f2f8fd", "#cfe4f5", "#2a6a99")}>
-          זו המידה שתכננתם במתכנן — {size.widthCm}×{size.depthCm} ס&quot;מ, גובה {heightOf(size)} ס&quot;מ.
-          המחיר מחושב מרשימת החומרים המלאה של המבנה הזה.
+          {`זו המידה שתכננתם במתכנן — ${size.widthCm}×${size.depthCm} ס"מ, גובה ${heightOf(size)} ס"מ. ` +
+            `המחיר מחושב מרשימת החומרים המלאה של המבנה הזה. `}
+          <a
+            data-id="custom-size-edit-planner"
+            href={plannerUrl}
+            style={{ color: ACCENT, fontWeight: 700, textDecoration: "none" }}
+          >
+            שנו את המידה במתכנן ›
+          </a>
         </div>
       )}
 
@@ -693,7 +727,7 @@ export default function BuyPanel({
                   }}
                 >
                   <div data-id="summary-row-size" style={{ display: "flex", justifyContent: "space-between", gap: 12 }}>
-                    <span data-id="summary-size-label">גודל {size.label} מטר</span>
+                    <span data-id="summary-size-label">{sizeSummary(size)}</span>
                     <span data-id="summary-size-price" dir="ltr">{ils(base)}</span>
                   </div>
                   {chosen.map((c, i) => {

@@ -89,22 +89,28 @@ const product = {
   // הובלה+הרכבה derived from footprint (₪2,350; 3x4 → ₪2,840) via
   // deliveryInstallPriceFor. Installation is never sold without shipping —
   // no competitor offers it and neither do we.
+  //
+  // The `id`s are the stable names the planner round trip restores selections
+  // by (see _components/planner.ts) — they travel in URLs, so renaming one
+  // breaks a customer who is mid-trip. Change a label freely; leave ids alone.
   options: [
     {
+      id: "delivery",
       label: "הובלה והרכבה:",
       choices: [
-        { label: "ללא (איסוף עצמי)", price: null },
-        { label: "הובלה בלבד", price: SHIPPING_ILS },
-        { label: "הובלה והרכבה", price: null, priceFromSize: "deliveryInstall" as const },
+        { id: "none", label: "ללא (איסוף עצמי)", price: null },
+        { id: "shipping", label: "הובלה בלבד", price: SHIPPING_ILS },
+        { id: "shipping-install", label: "הובלה והרכבה", price: null, priceFromSize: "deliveryInstall" as const },
       ],
     },
     {
+      id: "floor",
       label: "ריצפה",
       choices: [
-        { label: "ללא", price: null },
+        { id: "none", label: "ללא", price: null },
         // Floor price scales with the footprint (hamechola parity) — resolved
         // from the selected size's floorPrice in BuyPanel, not a flat number.
-        { label: "במת דק מעץ אורן מלא", price: null, priceFromSize: "floor" as const },
+        { id: "pine-deck", label: "במת דק מעץ אורן מלא", price: null, priceFromSize: "floor" as const },
       ],
     },
   ],
@@ -150,7 +156,7 @@ export default async function Home() {
       <div data-id="page-container" style={{ maxWidth: 1180, margin: "0 auto" }}>
         <SiteHeader />
 
-        <SizeProvider sizes={sizes}>
+        <SizeProvider sizes={sizes} options={product.options}>
           <main id="main-content" tabIndex={-1} style={{ outline: "none" }}>
           {/* ===== TOP: GALLERY + PURCHASE CARD ===== */}
           <div
@@ -165,7 +171,6 @@ export default async function Home() {
             {/* Purchase card (left) */}
             <div data-id="buy-column" style={{ flex: "1 1 380px", minWidth: 320, order: 2 }}>
               <BuyPanel
-                options={product.options}
                 buyLabel={product.buyLabel}
                 delivery={product.delivery}
                 trustTitle={product.trustTitle}

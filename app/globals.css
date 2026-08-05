@@ -57,6 +57,13 @@ textarea:focus-visible,
   gap: 14px 18px;
 }
 
+/* The size row carries the full shed (footprint + height + price) in one
+   option label, so it gets the whole width and the add-ons share the row
+   below it. */
+.config-size-field {
+  grid-column: 1 / -1;
+}
+
 @media (max-width: 560px) {
   .config-grid {
     grid-template-columns: 1fr;
