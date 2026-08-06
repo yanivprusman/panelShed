@@ -135,15 +135,18 @@ function Chevron() {
 }
 
 /**
- * The full purchase card: title, live price, size + add-on dropdowns, buy
- * button, delivery note, trust points/badges and an "ask on WhatsApp" link —
+ * The full purchase card: title, live price, size buttons + add-on dropdowns,
+ * buy button, delivery note, trust points/badges and an "ask on WhatsApp" link —
  * all in one bordered card (per the imported design).
  *
  * The size selector offers exactly two sheds, because that is what the shop
  * sells: the standard one (dimensions AND height spelled out — a shed is a
  * volume, and a buyer who only ever sees "2x2" is being told two thirds of the
- * product), or the one they design themselves in the planner. Choosing the
- * custom row before designing anything takes them to the planner and back.
+ * product), or the one they design themselves in the planner. Two of anything
+ * is a choice, not a list, so they are side-by-side buttons rather than a
+ * dropdown: both prices are on screen without opening anything, and the second
+ * option can't hide behind a closed menu. Choosing the custom one before
+ * designing anything takes them to the planner and back.
  * Delivery/floor dropdowns add surcharges; the total updates live. "קנה עכשיו"
  * opens an order modal (name + mobile + optional email + notes) and hands off to
  * Grow's hosted payment page.
@@ -313,11 +316,13 @@ export default function BuyPanel({
     setMode(next === "custom" ? "custom" : "standard");
   }
 
-  const customOptionLabel = custom
-    ? `המידה שלכם · ${sizeSummary(custom)} — ${ils(custom.price)}`
+  // Split across the button's two lines: what it is, then what it costs.
+  const customTitle = custom ? "המידה שלכם" : "מידה מותאמת אישית";
+  const customDetail = custom
+    ? `${sizeSummary(custom)} — ${ils(custom.price)}`
     : customStatus.state === "loading"
-      ? "המידה שלכם — מתמחרים…"
-      : "מידה מותאמת אישית — לתכנון במתכנן ›";
+      ? "מתמחרים…"
+      : "לתכנון במתכנן ›";
 
   function closeModal() {
     setOpen(false);
@@ -450,26 +455,31 @@ export default function BuyPanel({
 
       <div data-id="card-divider-1" style={{ ...divider, margin: "0 0 20px" }} />
 
-      {/* Size + add-on dropdowns — drive the live total */}
+      {/* Size buttons + add-on dropdowns — drive the live total */}
       <div data-id="config-grid" className="config-grid">
         <div data-id="size-field" className="config-size-field">
-          <label data-id="size-label" htmlFor="config-size" style={labelStyle}>גודל</label>
-          <div data-id="size-select-wrap" style={{ position: "relative" }}>
-            <select
-              data-id="select-size"
-              id="config-size"
-              style={selectStyle}
-              value={mode}
-              onChange={(e) => changeSize(e.target.value)}
+          <span data-id="size-label" id="size-label" style={labelStyle}>גודל</span>
+          <div data-id="size-choice" className="size-choice" role="group" aria-labelledby="size-label">
+            <button
+              type="button"
+              data-id="size-button-standard"
+              className={`size-btn${mode === "standard" ? " is-selected" : ""}`}
+              aria-pressed={mode === "standard"}
+              onClick={() => changeSize("standard")}
             >
-              <option data-id="size-option-standard" value="standard">
-                מידה סטנדרטית · {sizeSummary(standard)} — {ils(standard.price)}
-              </option>
-              <option data-id="size-option-custom" value="custom">
-                {customOptionLabel}
-              </option>
-            </select>
-            <Chevron />
+              <span className="size-btn-title">מידה סטנדרטית</span>
+              <span className="size-btn-sub">{sizeSummary(standard)} — {ils(standard.price)}</span>
+            </button>
+            <button
+              type="button"
+              data-id="size-button-custom"
+              className={`size-btn${mode === "custom" ? " is-selected" : ""}`}
+              aria-pressed={mode === "custom"}
+              onClick={() => changeSize("custom")}
+            >
+              <span className="size-btn-title">{customTitle}</span>
+              <span className="size-btn-sub">{customDetail}</span>
+            </button>
           </div>
           {/* The shed is a volume — height belongs on screen next to the
               footprint, not only in the description block far below. */}

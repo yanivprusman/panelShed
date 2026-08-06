@@ -57,11 +57,72 @@ textarea:focus-visible,
   gap: 14px 18px;
 }
 
-/* The size row carries the full shed (footprint + height + price) in one
-   option label, so it gets the whole width and the add-ons share the row
-   below it. */
+/* The size row carries the full shed (footprint + height + price) on each
+   button, so it gets the whole width and the add-ons share the row below it. */
 .config-size-field {
   grid-column: 1 / -1;
+}
+
+/* Size is a choice between exactly two sheds, so it is two buttons rather than
+   a dropdown: both prices stay on screen and neither option hides behind a
+   closed menu. Hover and selected states live here because inline styles
+   can't express them. */
+.size-choice {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.size-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 3px;
+  min-height: 42px;
+  padding: 9px 12px;
+  background: #f5f7f8;
+  border: 1px solid #d8dde0;
+  border-radius: 7px;
+  font-family: inherit;
+  text-align: start;
+  cursor: pointer;
+  transition: background 140ms ease, border-color 140ms ease, box-shadow 140ms ease;
+}
+
+.size-btn:hover {
+  background: #eef2f4;
+  border-color: #c3cbd0;
+}
+
+.size-btn:active {
+  background: #e6ebee;
+}
+
+.size-btn.is-selected {
+  background: #f2f8fd;
+  border-color: #2f8fd6;
+  box-shadow: inset 0 0 0 1px #2f8fd6;
+}
+
+.size-btn-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: #1a1a1a;
+}
+
+.size-btn.is-selected .size-btn-title {
+  color: #1d6ea8;
+}
+
+.size-btn-sub {
+  font-size: 12.5px;
+  color: #777;
+}
+
+@media (max-width: 560px) {
+  .size-choice {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (max-width: 560px) {
