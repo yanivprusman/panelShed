@@ -66,6 +66,36 @@ export async function quoteMaterialsPrice(
   return Math.round(data.total / 10) * 10;
 }
 
+/**
+ * Price a shed the customer DESIGNED, by the code CAD gave it.
+ *
+ * Deliberately not `quoteMaterialsPrice(width, depth, height)`: a footprint is
+ * not a shed. The roof slope and the top-channel material change the bill of
+ * materials — on a 3x2, turning the slope from front-to-back to left-to-right
+ * moves the total by ₪37 — so pricing a design by its three dimensions quotes a
+ * different shed than the one in the 3D view beside the price.
+ *
+ * The code is opaque here. This app never reads a CAD parameter name; it
+ * carries a string CAD minted and hands it back.
+ */
+export async function quoteDesignPrice(designCode: string): Promise<number> {
+  const url = `${quoteBaseUrl()}/api/quote?code=panel-shed&design=${encodeURIComponent(designCode)}`;
+  const res = await fetch(url, { next: { revalidate: 3600 } });
+  if (!res.ok) {
+    throw new Error(`CAD quote failed (${res.status}) for design ${designCode}`);
+  }
+  const data = (await res.json()) as QuoteResponse;
+  if (!data.success || typeof data.total !== "number") {
+    throw new Error(`CAD quote failed for design ${designCode}: ${data.error ?? "no total"}`);
+  }
+  if (data.missing && data.missing.length > 0) {
+    throw new Error(
+      `CAD quote for design ${designCode} is missing distributor prices: ${data.missing.join(", ")}`,
+    );
+  }
+  return Math.round(data.total / 10) * 10;
+}
+
 /** Attach the live CAD-quoted materials price to one size spec. */
 export async function priceSize(s: ShedSizeSpec): Promise<PricedShedSize> {
   return { ...s, price: await quoteMaterialsPrice(s.widthCm, s.depthCm, heightOf(s)) };

@@ -106,14 +106,23 @@ export function plannerUrl(
   return `${CAD_BASE}/?${q.toString()}`;
 }
 
-/** The read-only 3D viewer embed of one shed (no round trip, no controls). */
-export function plannerEmbedUrl(size: ShedSizeSpec): string {
-  const q = new URLSearchParams({
-    embed: "1",
-    width: String(size.widthCm),
-    length: String(size.depthCm),
-    height: String(heightOf(size)),
-  });
+/**
+ * The read-only 3D viewer embed of one shed (no round trip, no controls).
+ *
+ * With a design code the frame shows the shed the visitor actually designed —
+ * his door side, his roof slope — instead of a catalogue shed at his footprint.
+ * The code is opaque to us: we carry the string CAD minted and hand it back,
+ * exactly as CAD does with our `cfg`.
+ */
+export function plannerEmbedUrl(size: ShedSizeSpec, designCode?: string | null): string {
+  const q = designCode
+    ? new URLSearchParams({ embed: "1", design: designCode })
+    : new URLSearchParams({
+        embed: "1",
+        width: String(size.widthCm),
+        length: String(size.depthCm),
+        height: String(heightOf(size)),
+      });
   return `${CAD_BASE}/?${q.toString()}`;
 }
 

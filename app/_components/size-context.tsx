@@ -14,6 +14,7 @@ import {
   CONFIG_PARAM,
   decodeConfig,
   plannerUrl as buildPlannerUrl,
+  plannerEmbedUrl,
   type OptionGroup,
 } from "./planner";
 
@@ -59,6 +60,10 @@ type SizeCtx = {
   setChoice: (groupIdx: number, choiceIdx: number) => void;
   /** Full planner deep-link for the current configuration (the outbound leg). */
   plannerUrl: string;
+  /** The designed shed on show, if the visitor came back from the planner. */
+  designCode: string | null;
+  /** The 3D embed for what is actually being sold right now. */
+  embedUrl: string;
 };
 
 const Ctx = createContext<SizeCtx | null>(null);
@@ -77,6 +82,8 @@ export function SizeProvider({
   const [custom, setCustom] = useState<PricedShedSize | null>(null);
   const [customStatus, setCustomStatus] = useState<CustomStatus>({ state: "none" });
   const [sel, setSel] = useState<number[]>(() => options.map(() => 0));
+  // The designed shed we are showing and pricing, when there is one.
+  const [designCode, setDesignCode] = useState<string | null>(null);
 
   const setChoice = useCallback((groupIdx: number, choiceIdx: number) => {
     setSel((prev) => prev.map((v, i) => (i === groupIdx ? choiceIdx : v)));
@@ -114,13 +121,24 @@ export function SizeProvider({
       if (i >= 0) setStandardIndex(i);
     }
 
+    // A design code is the whole shed; width/length is only a footprint. The
+    // code wins when both are present — the planner sends both, the three
+    // numbers so we can label and vet the shed, the code so we price and show
+    // the one he actually designed.
+    const design = params.get("design");
     const width = params.get("width");
     const length = params.get("length");
-    if (!width || !length) return;
+    if (!design && (!width || !length)) return;
 
-    const query = new URLSearchParams({ width, length });
-    const height = params.get("height");
-    if (height) query.set("height", height);
+    const query = new URLSearchParams();
+    if (design) {
+      query.set("design", design);
+    } else {
+      query.set("width", width!);
+      query.set("length", length!);
+      const height = params.get("height");
+      if (height) query.set("height", height);
+    }
 
     let cancelled = false;
     // Kicking off external work on mount — and the visitor must see that we're
@@ -134,6 +152,7 @@ export function SizeProvider({
         if (cancelled) return;
         if (data.ok) {
           setCustom(data.size);
+          setDesignCode(data.designCode ?? null);
           setCustomStatus({ state: "ready" });
         } else {
           setCustomStatus({ state: "error", message: data.message });
@@ -170,8 +189,12 @@ export function SizeProvider({
       sel,
       setChoice,
       plannerUrl: buildPlannerUrl(size, options, { sizeLabel: standard.label, sel }),
+      designCode: mode === "custom" ? designCode : null,
+      // Only the custom shed has a design behind it; switching back to a
+      // catalogue SKU must show that SKU, not the shed he designed.
+      embedUrl: plannerEmbedUrl(size, mode === "custom" ? designCode : null),
     }),
-    [standard, custom, mode, size, customStatus, options, sel, setChoice],
+    [standard, custom, mode, size, customStatus, options, sel, setChoice, designCode],
   );
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;

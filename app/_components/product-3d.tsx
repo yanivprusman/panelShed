@@ -1,7 +1,6 @@
 "use client";
 
 import { useSize } from "./size-context";
-import { plannerEmbedUrl } from "./planner";
 
 /**
  * The "מתכנן המחסן" block in the description: an interactive 3D view of the shed
@@ -16,9 +15,7 @@ import { plannerEmbedUrl } from "./planner";
  * size.
  */
 export default function Product3D() {
-  const { size: s, plannerUrl } = useSize();
-  // CAD convention: width × length (= depth) in cm; height = low wall.
-  const src = plannerEmbedUrl(s);
+  const { plannerUrl, embedUrl: src } = useSize();
 
   const pill = {
     position: "absolute" as const,

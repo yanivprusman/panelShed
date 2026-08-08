@@ -6,7 +6,8 @@ import {
   STANDARD_HEIGHT_CM,
   type PricedShedSize,
 } from "@/app/_components/sizes";
-import { quoteMaterialsPrice } from "@/lib/cad-quote";
+import { quoteMaterialsPrice, quoteDesignPrice } from "@/lib/cad-quote";
+import { lookupDesign } from "@/lib/cad-designs";
 
 /**
  * Price a shed the customer designed in the CAD planner.
@@ -31,7 +32,7 @@ import { quoteMaterialsPrice } from "@/lib/cad-quote";
  */
 export const dynamic = "force-dynamic";
 
-type Ok = { ok: true; size: PricedShedSize };
+type Ok = { ok: true; size: PricedShedSize; designCode?: string };
 type Err = { ok: false; error: string; message: string };
 
 function bad(error: string, message: string, status = 400) {
@@ -40,9 +41,39 @@ function bad(error: string, message: string, status = 400) {
 
 export async function GET(request: NextRequest) {
   const sp = request.nextUrl.searchParams;
-  const widthCm = Number(sp.get("width"));
-  const depthCm = Number(sp.get("length"));
-  const heightCm = sp.get("height") === null ? STANDARD_HEIGHT_CM : Number(sp.get("height"));
+  const designCode = sp.get("design");
+
+  // Two ways in, and they mean different things.
+  //
+  //   ?design=<code>  a SHED the visitor designed — door side, roof slope and
+  //                   channel included. Priced as that shed.
+  //   ?width=&length= a FOOTPRINT, nothing more. Priced with the planner's own
+  //                   defaults, which is what the six catalogue SKUs are.
+  //
+  // Both still go through CUSTOM_LIMITS below: what we are willing to sell is
+  // our decision, not the planner's.
+  let widthCm: number;
+  let depthCm: number;
+  let heightCm: number;
+
+  if (designCode) {
+    const found = await lookupDesign(designCode);
+    if (found.state === "expired") {
+      return bad(
+        "design_expired",
+        "הקישור לעיצוב הזה היה בתוקף 10 ימים ופג. עצבו מחדש במתכנן או דברו איתנו ונשלח לכם קישור חדש.",
+        410,
+      );
+    }
+    if (found.state === "unknown") {
+      return bad("design_unknown", "לא מצאנו את העיצוב הזה. ייתכן שהקישור הועתק חלקית.", 404);
+    }
+    ({ widthCm, depthCm, heightCm } = found);
+  } else {
+    widthCm = Number(sp.get("width"));
+    depthCm = Number(sp.get("length"));
+    heightCm = sp.get("height") === null ? STANDARD_HEIGHT_CM : Number(sp.get("height"));
+  }
 
   if (![widthCm, depthCm, heightCm].every(Number.isFinite)) {
     return bad("invalid_dimensions", "המידות שהתקבלו מהמתכנן אינן תקינות.");
@@ -83,8 +114,12 @@ export async function GET(request: NextRequest) {
   // No fallback: a CAD outage or an unpriced item throws, and the customer is
   // told we can't quote right now — never a made-up or understated number.
   try {
-    const price = await quoteMaterialsPrice(widthCm, depthCm, heightCm);
-    return NextResponse.json<Ok>({ ok: true, size: { ...spec, price } });
+    // A design is priced as itself; a bare footprint is priced with the
+    // planner's defaults, exactly as before.
+    const price = designCode
+      ? await quoteDesignPrice(designCode)
+      : await quoteMaterialsPrice(widthCm, depthCm, heightCm);
+    return NextResponse.json<Ok>({ ok: true, size: { ...spec, price }, designCode: designCode ?? undefined });
   } catch (e) {
     console.error("custom-quote failed:", e);
     return bad(
