@@ -1,4 +1,5 @@
 import { listOrders, type Order, type PaymentStatus } from "@/lib/orders";
+import { designUrl } from "@/app/_components/planner";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -110,6 +111,21 @@ export default async function AdminOrdersPage({
                     <td style={{ ...cell, fontWeight: 700 }} dir="ltr">{ils(o.paidSum ?? o.totalIls)}</td>
                     <td style={{ ...cell, color: "#777", fontSize: 12.5, maxWidth: 280 }}>
                       {o.notes ? <div>📝 {o.notes}</div> : null}
+                      {/* The shed that was sold. Opens in the planner with the
+                          door, slope and channel the buyer chose. */}
+                      {o.designCode ? (
+                        <div>
+                          <a
+                            data-id="admin-order-design"
+                            href={designUrl(o.designCode)}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            style={{ color: "#2f8fd6", textDecoration: "none", fontWeight: 700 }}
+                          >
+                            📐 העיצוב במתכנן
+                          </a>
+                        </div>
+                      ) : null}
                       {o.cardSuffix ? <div dir="ltr">card ****{o.cardSuffix}</div> : null}
                       {o.asmachta ? <div dir="ltr">asmachta {o.asmachta}</div> : null}
                       <div dir="ltr" style={{ color: "#bbb" }}>{o.id}</div>

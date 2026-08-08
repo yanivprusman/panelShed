@@ -29,9 +29,9 @@ import {
  *              Merchant feed can deep-link another SKU with /?size=<label>,
  *              and then THAT one is the standard on this visit (the visible
  *              price has to equal the feed's, or Google disapproves the item).
- *   custom   — a footprint the visitor designed in the CAD planner and came
- *              back with (/?width=&length=&height=), priced live by
- *              /api/custom-quote from CAD's real bill of materials.
+ *   custom   — the shed the visitor designed in the CAD planner and came back
+ *              with (/?design=<code>), priced live by /api/custom-quote from
+ *              CAD's real bill of materials for THAT shed.
  *
  * Both legs of that planner trip also carry `cfg`, the whole configurator state
  * (see ./planner.ts), so add-on selections survive the detour.
@@ -94,13 +94,16 @@ export function SizeProvider({
   //
   //   /?size=<label>            — a catalogue SKU, from the Merchant feed or a
   //                               Shopping ad.
-  //   /?width=&length=&height=  — a footprint designed in the CAD planner,
-  //                               coming back here to be bought. Priced live.
+  //   /?design=<code>           — the shed designed in the CAD planner, coming
+  //                               back here to be bought. Priced live.
+  //   /?width=&length=&height=  — a bare footprint with no shed behind it. Only
+  //                               hand-made links arrive this way now; the
+  //                               planner always sends its code instead.
   //   /?cfg=…                   — the configuration this visitor left with,
-  //                               echoed back by the planner. Restored on both
+  //                               echoed back by the planner. Restored on all
   //                               of the above (see ./planner.ts).
   //
-  // width/length win over size when both are present: the visitor just designed
+  // A design wins over size when both are present: the visitor just designed
   // that shed, so it's the more specific intent.
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -121,10 +124,10 @@ export function SizeProvider({
       if (i >= 0) setStandardIndex(i);
     }
 
-    // A design code is the whole shed; width/length is only a footprint. The
-    // code wins when both are present — the planner sends both, the three
-    // numbers so we can label and vet the shed, the code so we price and show
-    // the one he actually designed.
+    // A design code is the whole shed, its dimensions included; width/length is
+    // only a footprint. The code wins outright when both are present — it is the
+    // single source, and re-deriving the size from numbers sitting beside it is
+    // how the two end up disagreeing.
     const design = params.get("design");
     const width = params.get("width");
     const length = params.get("length");
@@ -188,7 +191,14 @@ export function SizeProvider({
       options,
       sel,
       setChoice,
-      plannerUrl: buildPlannerUrl(size, options, { sizeLabel: standard.label, sel }),
+      // Same gate as embedUrl below: a design belongs to the custom shed only,
+      // so switching back to the catalogue SKU must neither show nor re-open it.
+      plannerUrl: buildPlannerUrl(
+        size,
+        options,
+        { sizeLabel: standard.label, sel },
+        mode === "custom" ? designCode : null,
+      ),
       designCode: mode === "custom" ? designCode : null,
       // Only the custom shed has a design behind it; switching back to a
       // catalogue SKU must show that SKU, not the shed he designed.

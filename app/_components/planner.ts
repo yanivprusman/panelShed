@@ -10,17 +10,25 @@ import { heightOf, metersLabel, type ShedSizeSpec } from "./sizes";
  *   storefront ──(dimensions + full configuration)──▶ planner
  *   storefront ◀──(designed dimensions + the same configuration)── planner
  *
- * The outbound leg carries the visitor's whole configurator state in one opaque
- * `cfg` parameter; CAD stores nothing and understands nothing of it — it just
- * echoes it back on its "הזמינו את המידות האלה" link (see CAD's
- * lib/storefront-url.ts). So a customer who had picked, say, הובלה והרכבה + במת
- * דק before going off to design a footprint gets those two selections back when
- * they return, instead of an empty form.
+ * Both legs carry the visitor's whole configurator state in one opaque `cfg`
+ * parameter; CAD stores nothing and understands nothing of it — it just echoes
+ * it back on its "הזמינו את המידות האלה" link (see CAD's lib/storefront-url.ts).
+ * So a customer who had picked, say, הובלה והרכבה + במת דק before going off to
+ * design a footprint gets those two selections back when they return, instead of
+ * an empty form.
  *
  * `cfg` is itself a URL-encoded query string (`v=1&size=2x2&delivery=…`), so it
  * encodes and parses with URLSearchParams — no bespoke parser to get wrong. A
  * `cfg` from an older/newer version is ignored outright rather than
  * half-applied.
+ *
+ * THE SHED TRAVELS AS ONE THING. A design code is the whole shed, its three
+ * dimensions included, so a link carrying one carries nothing else — sending
+ * width/length/height beside it would state the same numbers from a second
+ * source, and two sources drift (a design drawn with CAD's "exact outer
+ * dimensions" reads one wall-inset apart). The dimensions are the message only
+ * when there is no design yet: a visitor still on the catalogue shed has no row
+ * to point at.
  */
 
 const CAD_BASE = process.env.NEXT_PUBLIC_CAD_BASE_URL || "https://diy-cad.com";
@@ -90,19 +98,27 @@ export function decodeConfig(
 /**
  * Deep-link into the full planner, pre-set to the shed on screen and carrying
  * the configuration home again.
+ *
+ * With a design code the planner reopens the shed the visitor actually designed
+ * — his door side, his roof slope — instead of redrawing a default shed at his
+ * footprint and quietly discarding every choice he made. Without one, the
+ * dimensions are how we say "start him at this size".
  */
 export function plannerUrl(
   size: ShedSizeSpec,
   groups: OptionGroup[],
   config: StorefrontConfig,
+  designCode?: string | null,
 ): string {
-  const q = new URLSearchParams({
-    dcode: DISTRIBUTOR_CODE,
-    width: String(size.widthCm),
-    length: String(size.depthCm),
-    height: String(heightOf(size)),
-    [CONFIG_PARAM]: encodeConfig(groups, config),
-  });
+  const q = new URLSearchParams({ dcode: DISTRIBUTOR_CODE });
+  if (designCode) {
+    q.set("design", designCode);
+  } else {
+    q.set("width", String(size.widthCm));
+    q.set("length", String(size.depthCm));
+    q.set("height", String(heightOf(size)));
+  }
+  q.set(CONFIG_PARAM, encodeConfig(groups, config));
   return `${CAD_BASE}/?${q.toString()}`;
 }
 
@@ -125,6 +141,15 @@ export function plannerEmbedUrl(size: ShedSizeSpec, designCode?: string | null):
       });
   return `${CAD_BASE}/?${q.toString()}`;
 }
+
+/**
+ * The planner link for one saved design — the whole shed in a single URL, for
+ * an order record or an alert. A customer's link lapses after CAD's 10-day
+ * window; ours does not, because these designs are minted under this
+ * storefront's distributor code and CAD keeps serving a row to its owner.
+ */
+export const designUrl = (code: string) =>
+  `${CAD_BASE}/?design=${encodeURIComponent(code)}`;
 
 /** "2×2 מטר · גובה 2.2 מטר" — the full shed, height included, in one line. */
 export function sizeSummary(s: ShedSizeSpec): string {

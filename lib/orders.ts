@@ -28,6 +28,14 @@ export type Order = {
   title: string;
   totalIls: number | null;
   options: OrderLine[];
+  /**
+   * The CAD design code, when the buyer bought a shed they designed in the
+   * planner rather than the catalogue one. It IS the shed — door side, swing,
+   * roof slope, channel material — and the price on this order was computed
+   * from its bill of materials, so an order without it records what was paid
+   * and nothing about what was bought. Absent means the catalogue shed.
+   */
+  designCode?: string;
   paymentStatus: PaymentStatus;
   /**
    * True when the buyer proved the address by typing back a code we mailed to

@@ -11,7 +11,9 @@ import "server-only";
  *
  * What we DO need back is the footprint, because that is ours: the label the
  * shed is sold under, and the CUSTOM_LIMITS check that decides whether we are
- * willing to sell it at all.
+ * willing to sell it at all. The code is the ONLY source for it — a link that
+ * carries a design carries nothing else, precisely so there is never a second
+ * set of numbers to disagree with this one.
  *
  * No token is sent. A customer opening his link must hit the same 10-day
  * window he would on diy-cad.com — carrying the panel-shed credential here
@@ -50,12 +52,17 @@ export async function lookupDesign(code: string): Promise<DesignLookup> {
   }
 
   const data = await res.json();
-  const p = data?.params ?? {};
-  // CAD's `width`/`length` are the storefront's width/depth — the same
-  // convention plannerUrl() sends them out with.
-  const widthCm = Number(p.width);
-  const depthCm = Number(p.length);
-  const heightCm = Number(p.height);
+  // `storefront`, never `params`. CAD measures a design two ways — the planner's
+  // own numbers, which mean different things depending on its "exact outer
+  // dimensions" setting, and the same shed in OUR units. Reading `params` here
+  // means reading a shed one wall-inset (10cm) too big whenever a customer
+  // ticked that box, and labelling and selling it at the wrong size.
+  const s = data?.storefront ?? {};
+  // CAD's `width`/`length` are our width/depth — the same convention
+  // plannerUrl() sends them out with.
+  const widthCm = Number(s.width);
+  const depthCm = Number(s.length);
+  const heightCm = Number(s.height);
   if (![widthCm, depthCm, heightCm].every(Number.isFinite)) {
     throw new Error(`CAD design ${code} came back without usable dimensions`);
   }

@@ -1,6 +1,7 @@
 import "server-only";
 import { sendDaemonCommand } from "@/lib/daemon";
 import { ALERT_EMAIL } from "@/app/_components/contact";
+import { designUrl } from "@/app/_components/planner";
 import type { Order } from "@/lib/orders";
 
 const ils = (n: number | null | undefined) =>
@@ -82,6 +83,10 @@ function orderBody(order: Order, event: OrderEvent): string {
     order.notes ? `הערות הלקוח: ${order.notes}` : ``,
     ``,
     `מוצר: ${order.title}`,
+    // The shed itself, for anyone who has to build it: door side, swing, roof
+    // slope and channel material live behind this link, and the price above was
+    // computed from them.
+    order.designCode ? `העיצוב: ${designUrl(order.designCode)}` : ``,
     `סכום: ${ils(order.paidSum ?? order.totalIls)}`,
     lines ? `פירוט:\n${lines}` : ``,
     order.cardSuffix ? `כרטיס: ****${order.cardSuffix}` : ``,

@@ -181,6 +181,7 @@ export default function BuyPanel({
     sel,
     setChoice,
     plannerUrl,
+    designCode,
   } = useSize();
   const base = size.price;
   const title = productTitle(size.label);
@@ -402,6 +403,10 @@ export default function BuyPanel({
           title,
           totalIls: newTotal,
           options: orderOptions,
+          // Which shed this is. The total above was computed from this design's
+          // bill of materials, so an order that keeps the price and drops the
+          // code records what was paid and not what was bought.
+          designCode: designCode ?? undefined,
         }),
       });
       const data = (await res.json()) as {

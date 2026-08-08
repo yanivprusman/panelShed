@@ -4,6 +4,7 @@ import { growMakeConfig, createPaymentLink } from "@/lib/growMake";
 import { isValidIsraeliMobile, normalizeIsraeliPhone } from "@/lib/meshulam";
 import { notifyOwner } from "@/lib/notify";
 import { isPlausibleEmail, normalizeEmail, verifyCode } from "@/lib/emailVerification";
+import { isValidDesignCode } from "@/lib/cad-designs";
 
 export const runtime = "nodejs";
 
@@ -18,6 +19,8 @@ type CheckoutPayload = {
   title?: string;
   totalIls?: number;
   options?: OrderLine[];
+  /** CAD design code when the buyer designed their own shed. */
+  designCode?: string;
 };
 
 /**
@@ -90,6 +93,14 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: false, error: "bad_total" }, { status: 400 });
   }
 
+  // Which shed. Absent is normal — that is the catalogue one. Present but not a
+  // CAD code is refused rather than dropped: dropping it is exactly how an order
+  // ends up recording a designed shed's price and none of its design.
+  const designCode = body.designCode?.trim() || undefined;
+  if (designCode !== undefined && !isValidDesignCode(designCode)) {
+    return NextResponse.json({ ok: false, error: "bad_design" }, { status: 400 });
+  }
+
   const order: Order = {
     id: `order_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`,
     timestamp: new Date().toISOString(),
@@ -100,6 +111,7 @@ export async function POST(request: Request) {
     title: body.title ?? "",
     totalIls: total,
     options: Array.isArray(body.options) ? body.options : [],
+    designCode,
     paymentStatus: "pending",
     // Only ever true — an unverified address never reaches this point.
     emailVerified: email ? true : undefined,
