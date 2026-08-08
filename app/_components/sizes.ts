@@ -26,13 +26,20 @@ export const STANDARD_HEIGHT_CM = 220;
 
 export const heightOf = (s: ShedSizeSpec) => s.heightCm ?? STANDARD_HEIGHT_CM;
 
+/**
+ * The catalogue. ONE shed (user decision 2026-08-08) — the shop sells the
+ * standard 2x2 or whatever the visitor designs in the planner, and nothing in
+ * between. Five further SKUs (3x2, 3x2.5, 3x3, 4x2, 3x4) were retired that day;
+ * anyone wanting those sizes designs them, which prices them from the same bill
+ * of materials anyway.
+ *
+ * Everything downstream derives from this array — the Merchant feed emits one
+ * <item> per entry and the JSON-LD offer count reads its length — so adding a
+ * size back is an edit here and nowhere else. A stale ad naming a retired size
+ * finds no match in ?size= and lands on the shed below, which is correct.
+ */
 export const SIZES: ShedSizeSpec[] = [
   { label: "2x2", widthCm: 200, depthCm: 200 },
-  { label: "3x2", widthCm: 300, depthCm: 200 },
-  { label: "3x2.5", widthCm: 300, depthCm: 250 },
-  { label: "3x3", widthCm: 300, depthCm: 300 },
-  { label: "4x2", widthCm: 400, depthCm: 200 },
-  { label: "3x4", widthCm: 300, depthCm: 400 },
 ];
 
 export const ROOF = { high: 230, low: 220 };
