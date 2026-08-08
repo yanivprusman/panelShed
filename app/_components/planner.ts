@@ -125,10 +125,11 @@ export function plannerUrl(
 /**
  * The read-only 3D viewer embed of one shed (no round trip, no controls).
  *
- * With a design code the frame shows the shed the visitor actually designed —
- * his door side, his roof slope — instead of a catalogue shed at his footprint.
- * The code is opaque to us: we carry the string CAD minted and hand it back,
- * exactly as CAD does with our `cfg`.
+ * Same rule as plannerUrl: the code when there is one — the catalogue shed has
+ * its own, and a designed one arrives with the visitor — so the frame shows the
+ * shed being priced beside it rather than a lookalike rebuilt from three
+ * numbers. The code is opaque to us: we carry the string CAD minted and hand it
+ * back, exactly as CAD does with our `cfg`.
  */
 export function plannerEmbedUrl(size: ShedSizeSpec, designCode?: string | null): string {
   const q = designCode

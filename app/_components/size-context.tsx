@@ -60,7 +60,8 @@ type SizeCtx = {
   setChoice: (groupIdx: number, choiceIdx: number) => void;
   /** Full planner deep-link for the current configuration (the outbound leg). */
   plannerUrl: string;
-  /** The designed shed on show, if the visitor came back from the planner. */
+  /** The CAD design being sold right now — the visitor's if they designed one,
+   *  the catalogue shed's own otherwise. The identity everything else agrees on. */
   designCode: string | null;
   /** The 3D embed for what is actually being sold right now. */
   embedUrl: string;
@@ -175,6 +176,13 @@ export function SizeProvider({
   }, [catalogue, options]);
 
   const standard = catalogue[standardIndex] ?? catalogue[0];
+  // The shed on offer right now, as ONE identity: the visitor's design when
+  // there is one, otherwise the catalogue shed's own. Everything that has to
+  // agree about which shed this is — the price, the 3D frame, the planner link,
+  // the order — reads this and only this, so none of them can be about a
+  // different shed than the others.
+  const activeDesign =
+    (mode === "custom" && custom ? designCode : standard?.designCode) ?? null;
   // "custom" only sells a shed once it has a real price; until then (loading, or
   // a quote we couldn't get) the standard shed is what's priced on the card,
   // while the selector still shows the custom row plus its status note.
@@ -191,20 +199,11 @@ export function SizeProvider({
       options,
       sel,
       setChoice,
-      // Same gate as embedUrl below: a design belongs to the custom shed only,
-      // so switching back to the catalogue SKU must neither show nor re-open it.
-      plannerUrl: buildPlannerUrl(
-        size,
-        options,
-        { sizeLabel: standard.label, sel },
-        mode === "custom" ? designCode : null,
-      ),
-      designCode: mode === "custom" ? designCode : null,
-      // Only the custom shed has a design behind it; switching back to a
-      // catalogue SKU must show that SKU, not the shed he designed.
-      embedUrl: plannerEmbedUrl(size, mode === "custom" ? designCode : null),
+      plannerUrl: buildPlannerUrl(size, options, { sizeLabel: standard.label, sel }, activeDesign),
+      designCode: activeDesign,
+      embedUrl: plannerEmbedUrl(size, activeDesign),
     }),
-    [standard, custom, mode, size, customStatus, options, sel, setChoice, designCode],
+    [standard, custom, mode, size, customStatus, options, sel, setChoice, activeDesign],
   );
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;

@@ -1,7 +1,6 @@
 import {
   SIZES,
   STANDARD_HEIGHT_CM,
-  heightOf,
   type PricedShedSize,
   type ShedSizeSpec,
 } from "@/app/_components/sizes";
@@ -14,12 +13,10 @@ import {
  * therefore reach the storefront + merchant feed without a deploy, after at
  * most an hour (fetch revalidate below).
  *
- * The deep-link geometry semantics match the "עצב בתלת-ממד" button
- * (?width=<Wcm>&length=<Dcm>&height=220), so the storefront price and the
- * CAD page's own price proposal for the same shed can never diverge.
- *
- * The same endpoint prices ANY footprint, which is what lets a shed designed in
- * the CAD planner come back here and be sold — see app/api/custom-quote.
+ * Everything the shop sells is priced by DESIGN CODE — the catalogue shed and
+ * the one a visitor designed alike — so the price on the card, the shed in the
+ * 3D frame and the shed the planner opens are the same row in CAD's database,
+ * and cannot drift apart. See app/api/custom-quote for the visitor's half.
  *
  * No fallback: if CAD is unreachable or any priceable item lacks a price,
  * this throws and the page/feed fails loudly rather than showing stale or
@@ -42,6 +39,15 @@ function quoteBaseUrl(): string {
   return base.replace(/\/$/, "");
 }
 
+/**
+ * Price a bare FOOTPRINT — three numbers with no shed behind them, quoted with
+ * the planner's own defaults.
+ *
+ * Nothing this app builds links this way any more: every link it writes carries
+ * a design code. It stays for links written before that was true (a customer's
+ * bookmarked /?width=&length=&height= from the old round trip) and for anything
+ * hand-made, which have no code to offer and would otherwise 404 a real visitor.
+ */
 export async function quoteMaterialsPrice(
   widthCm: number,
   depthCm: number,
@@ -96,9 +102,23 @@ export async function quoteDesignPrice(designCode: string): Promise<number> {
   return Math.round(data.total / 10) * 10;
 }
 
-/** Attach the live CAD-quoted materials price to one size spec. */
+/**
+ * Attach the live CAD-quoted materials price to one size spec.
+ *
+ * By its design code, not its dimensions: the catalogue shed is a design row
+ * like any other, so it is priced the same way the shed a customer designed is,
+ * and the price on the card is a price for a shed we can point at. A SKU without
+ * a code fails loudly rather than being priced as a bare footprint — that would
+ * quote a shed nobody has seen.
+ */
 export async function priceSize(s: ShedSizeSpec): Promise<PricedShedSize> {
-  return { ...s, price: await quoteMaterialsPrice(s.widthCm, s.depthCm, heightOf(s)) };
+  if (!s.designCode) {
+    throw new Error(
+      `Catalogue size ${s.label} has no designCode — mint one with ` +
+        `cad/web/scripts/seed-catalogue-design.mjs and put it in SIZES`,
+    );
+  }
+  return { ...s, price: await quoteDesignPrice(s.designCode) };
 }
 
 /** All storefront sizes with their live CAD-quoted materials prices. */

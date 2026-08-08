@@ -16,6 +16,16 @@ export type ShedSizeSpec = {
   heightCm?: number;
   /** True for a footprint designed in the CAD planner rather than a catalogue SKU. */
   custom?: boolean;
+  /**
+   * The CAD design this SKU IS. A catalogue shed is not a different kind of
+   * thing from a designed one — it is a design the shop sells rather than one a
+   * customer was handed — so it has a code like any other, and the code is what
+   * prices it, shows it in 3D and opens it in the planner. Minted evergreen by
+   * cad/web/scripts/seed-catalogue-design.mjs and written here by hand: nothing
+   * discovers it at runtime, so the shed we sell can never change because a
+   * script ran. Absent on a custom size, whose code arrives with the visitor.
+   */
+  designCode?: string;
 };
 
 /** A size spec with its CAD-quoted materials price (₪, before add-ons). */
@@ -39,7 +49,7 @@ export const heightOf = (s: ShedSizeSpec) => s.heightCm ?? STANDARD_HEIGHT_CM;
  * finds no match in ?size= and lands on the shed below, which is correct.
  */
 export const SIZES: ShedSizeSpec[] = [
-  { label: "2x2", widthCm: 200, depthCm: 200 },
+  { label: "2x2", widthCm: 200, depthCm: 200, designCode: "b9jxeGmj962uihx" },
 ];
 
 export const ROOF = { high: 230, low: 220 };
