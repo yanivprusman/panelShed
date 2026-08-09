@@ -113,6 +113,14 @@ export function DesignDetails() {
   // that opens an empty box.
   if (!designCode) return null;
 
+  // A visitor's design that we could not price — too tall to sell, CAD down —
+  // leaves the card showing the CATALOGUE shed, because that is the only one
+  // with a price on it. `designCode` follows the card, so the panel would open
+  // on the catalogue shed's door and slope directly under a message about the
+  // shed he designed, and read as a description of his. It is not. He is told
+  // about his shed by that message; he is not told a different one is his.
+  if (customStatus.state === "error" || customStatus.state === "loading") return null;
+
   return (
     <div data-id="design-details">
       <button

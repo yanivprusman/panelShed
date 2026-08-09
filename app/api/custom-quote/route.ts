@@ -81,17 +81,28 @@ export async function GET(request: NextRequest) {
 
   const { minCm, maxCm, minHeightCm, maxHeightCm, maxSqm } = CUSTOM_LIMITS;
   const inRange = (v: number, lo: number, hi: number) => v >= lo && v <= hi;
+
+  // Say what we RECEIVED before saying we won't sell it. A refusal that names
+  // only the rule leaves the customer unable to tell whether his design arrived
+  // at all — and when it is refused, the page falls back to showing the
+  // catalogue shed, so this sentence is the only thing on screen that is about
+  // the shed he actually drew.
+  const designed =
+    `המידות שתכננתם: רוחב ${widthCm} ס"מ · עומק ${depthCm} ס"מ · גובה ${heightCm} ס"מ. `;
+
   if (!inRange(widthCm, minCm, maxCm) || !inRange(depthCm, minCm, maxCm)) {
     return bad(
       "out_of_range",
-      `אנחנו מוכרים מחסנים ברוחב ובעומק שבין ${minCm / 100} ל-${maxCm / 100} מטר. ` +
+      designed +
+        `אנחנו מוכרים מחסנים ברוחב ובעומק שבין ${minCm / 100} ל-${maxCm / 100} מטר. ` +
         `למידות אחרות — דברו איתנו ונבנה לכם הצעה.`,
     );
   }
   if (!inRange(heightCm, minHeightCm, maxHeightCm)) {
     return bad(
       "out_of_range",
-      `אנחנו מוכרים מחסנים בגובה שבין ${minHeightCm / 100} ל-${maxHeightCm / 100} מטר. ` +
+      designed +
+        `אנחנו מוכרים מחסנים בגובה שבין ${minHeightCm / 100} ל-${maxHeightCm / 100} מטר. ` +
         `לגובה אחר — דברו איתנו ונבנה לכם הצעה.`,
     );
   }
@@ -107,7 +118,7 @@ export async function GET(request: NextRequest) {
   if (footprintSqm(spec) > maxSqm) {
     return bad(
       "out_of_range",
-      `המידות שבחרתם גדולות מ-${maxSqm} מ"ר. דברו איתנו ונבנה לכם הצעה מותאמת.`,
+      designed + `זה גדול מ-${maxSqm} מ"ר. דברו איתנו ונבנה לכם הצעה מותאמת.`,
     );
   }
 
