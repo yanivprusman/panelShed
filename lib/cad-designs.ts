@@ -9,6 +9,11 @@ import "server-only";
  * validates a field, never defaults one — the exact deal CAD already has with
  * our own `cfg` token, pointed the other way.
  *
+ * That holds even now that we SHOW the design's settings (see lookupDesignSpec):
+ * CAD answers in finished label/value pairs and we render them as opaque text.
+ * A door swing is still a phrase we can print and not a field we understand, so
+ * a parameter added to the planner appears here with no edit to this app.
+ *
  * What we DO need back is the footprint, because that is ours: the label the
  * shed is sold under, and the CUSTOM_LIMITS check that decides whether we are
  * willing to sell it at all. The code is the ONLY source for it — a link that
@@ -41,17 +46,30 @@ export function isValidDesignCode(code: unknown): code is string {
   return typeof code === "string" && /^[0-9A-Za-z]{15}$/.test(code);
 }
 
-export async function lookupDesign(code: string): Promise<DesignLookup> {
-  if (!isValidDesignCode(code)) return { state: "unknown" };
-
-  const res = await fetch(`${cadBaseUrl()}/api/designs/${code}`, { cache: "no-store" });
+/**
+ * One GET of a design row. Returns null for the two answers that are about the
+ * LINK rather than a failure — gone, or never existed — and throws for anything
+ * else, so a CAD outage can never read as "no such shed".
+ */
+async function fetchDesign(
+  code: string,
+  query = "",
+): Promise<{ state: "expired" | "unknown" } | { state: "ok"; data: Record<string, unknown> }> {
+  const res = await fetch(`${cadBaseUrl()}/api/designs/${code}${query}`, { cache: "no-store" });
   if (res.status === 404) return { state: "unknown" };
   if (res.status === 410) return { state: "expired" };
   if (!res.ok) {
     throw new Error(`CAD design lookup failed (${res.status}) for ${code}`);
   }
+  return { state: "ok", data: await res.json() };
+}
 
-  const data = await res.json();
+export async function lookupDesign(code: string): Promise<DesignLookup> {
+  if (!isValidDesignCode(code)) return { state: "unknown" };
+
+  const found = await fetchDesign(code);
+  if (found.state !== "ok") return found;
+  const data = found.data as { storefront?: Record<string, unknown> };
   // `storefront`, never `params`. CAD measures a design two ways — the planner's
   // own numbers, which mean different things depending on its "exact outer
   // dimensions" setting, and the same shed in OUR units. Reading `params` here
@@ -67,4 +85,46 @@ export async function lookupDesign(code: string): Promise<DesignLookup> {
     throw new Error(`CAD design ${code} came back without usable dimensions`);
   }
   return { state: "ok", widthCm, depthCm, heightCm };
+}
+
+/** One line of the design, as CAD phrased it. Both sides are opaque here. */
+export type DesignSpecRow = { label: string; value: string };
+
+export type DesignSpecLookup =
+  | { state: "ok"; rows: DesignSpecRow[] }
+  | { state: "expired" }
+  | { state: "unknown" };
+
+/**
+ * What the customer designed, in words — for the "full details" panel beside
+ * the price.
+ *
+ * Deliberately a SEPARATE call from lookupDesign, which prices the shed. The
+ * two answer different questions at different moments (pricing on load, this
+ * one only if the customer asks to see it), and keeping them apart means a
+ * problem with the wording can never stop us selling the shed.
+ */
+export async function lookupDesignSpec(code: string): Promise<DesignSpecLookup> {
+  if (!isValidDesignCode(code)) return { state: "unknown" };
+
+  const found = await fetchDesign(code, "?locale=he");
+  if (found.state !== "ok") return found;
+
+  // Shape-check only — a row's TEXT is CAD's business and is never inspected.
+  // An answer that isn't rows at all means the two apps disagree about this
+  // endpoint, which the panel must report rather than render as blank lines.
+  const raw = (found.data as { spec?: unknown }).spec;
+  if (!Array.isArray(raw)) {
+    throw new Error(`CAD design ${code} came back without a spec`);
+  }
+  const rows = raw.filter(
+    (r): r is DesignSpecRow =>
+      !!r && typeof r === "object" &&
+      typeof (r as DesignSpecRow).label === "string" &&
+      typeof (r as DesignSpecRow).value === "string",
+  );
+  if (rows.length !== raw.length) {
+    throw new Error(`CAD design ${code} returned a malformed spec row`);
+  }
+  return { state: "ok", rows };
 }

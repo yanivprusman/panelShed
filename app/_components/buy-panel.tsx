@@ -16,6 +16,7 @@ import {
   heightOf,
 } from "./sizes";
 import { sizeSummary, type OptionChoice as Choice } from "./planner";
+import { DesignDetails } from "./design-details";
 import { whatsappUrl } from "./contact";
 import { WhatsAppIcon, CheckIcon } from "./icons";
 import { reportLead } from "@/lib/gtag";
@@ -563,6 +564,13 @@ export default function BuyPanel({
           </a>
         </div>
       )}
+
+      {/* The simple settings stay exactly as they are above; everything else the
+          customer chose in the planner — door, swing, handle, slope, channel —
+          is one tap away and closed until he asks. Keyed by the shed being sold:
+          switching between the catalogue one and his own starts a fresh panel,
+          so it can never show one shed's settings under the other's price. */}
+      <DesignDetails key={designCode ?? "none"} />
 
       {/* Primary lead CTA: one-tap WhatsApp with the configured product, no
           up-front payment. Fires the Google Ads Lead conversion on click so the
