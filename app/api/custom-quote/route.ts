@@ -33,9 +33,9 @@ import { lookupDesign } from "@/lib/cad-designs";
  */
 export const dynamic = "force-dynamic";
 
-/** `warning` is present when the shed is outside what we routinely sell — it is
- *  priced and shown all the same, with the caveat said out loud. */
-type Ok = { ok: true; size: PricedShedSize; designCode?: string; warning?: string };
+/** `nonStandardSize` marks a shed outside what we routinely sell — priced and
+ *  shown all the same, with the caveat said out loud by the caller. */
+type Ok = { ok: true; size: PricedShedSize; designCode?: string; nonStandardSize?: boolean };
 type Err = { ok: false; error: string; message: string };
 
 function bad(error: string, message: string, status = 400) {
@@ -100,40 +100,15 @@ export async function GET(request: NextRequest) {
   // except that his design had vanished — the page fell back to the catalogue
   // shed and the whole screen became about a shed he had not designed.
   //
-  // Every reason is collected, not just the first: a shed can be both too tall
-  // and too large, and being told one at a time is how a customer discovers the
-  // second only after fixing the first.
-  const warnings: string[] = [];
-  if (!inRange(widthCm, minCm, maxCm) || !inRange(depthCm, minCm, maxCm)) {
-    warnings.push(
-      `הרוחב והעומק שאנחנו מוכרים דרך האתר הם בין ${minCm / 100} ל-${maxCm / 100} מטר`,
-    );
-  }
-  if (!inRange(heightCm, minHeightCm, maxHeightCm)) {
-    warnings.push(
-      `הגובה שאנחנו מוכרים דרך האתר הוא בין ${minHeightCm / 100} ל-${maxHeightCm / 100} מטר`,
-    );
-  }
-  if (footprintSqm(spec) > maxSqm) {
-    warnings.push(`השטח שאנחנו מוכרים דרך האתר הוא עד ${maxSqm} מ"ר`);
-  }
-
-  // Named dimensions first: the customer has to be able to see that his design
-  // arrived intact before he reads what is unusual about it. The price that
-  // follows is real — a full bill of materials for THIS shed — and the sentence
-  // never promises we will build it, because that is a call a person makes.
-  // "א", "א ו-ב", "א, ב ו-ג" — a Hebrew list takes the vav before the LAST item
-  // only, not before every one of them.
-  const hebrewList = (items: string[]) =>
-    items.length < 2
-      ? items.join("")
-      : `${items.slice(0, -1).join(", ")} ו${items[items.length - 1]}`;
-
-  const warning = warnings.length
-    ? `המידות שתכננתם: רוחב ${widthCm} ס"מ · עומק ${depthCm} ס"מ · גובה ${heightCm} ס"מ. ` +
-      `${hebrewList(warnings)}. המחיר כאן מחושב מרשימת החומרים המלאה של המבנה הזה, ` +
-      `אבל מידה חורגת טעונה אישור שלנו לפני ייצור — דברו איתנו ונוודא שהכול מתאים.`
-    : undefined;
+  // A FLAG, not a sentence. Which bound was breached, and by how much, is not
+  // worth the paragraph it takes to say: the customer can see his measurements
+  // in the size row and the full spec right below it, and what he actually
+  // needs from this box is that the size is unusual and that we should talk.
+  const nonStandardSize =
+    !inRange(widthCm, minCm, maxCm) ||
+    !inRange(depthCm, minCm, maxCm) ||
+    !inRange(heightCm, minHeightCm, maxHeightCm) ||
+    footprintSqm(spec) > maxSqm;
 
   // No fallback: a CAD outage or an unpriced item throws, and the customer is
   // told we can't quote right now — never a made-up or understated number.
@@ -147,7 +122,7 @@ export async function GET(request: NextRequest) {
       ok: true,
       size: { ...spec, price },
       designCode: designCode ?? undefined,
-      warning,
+      nonStandardSize: nonStandardSize || undefined,
     });
   } catch (e) {
     console.error("custom-quote failed:", e);
