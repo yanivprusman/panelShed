@@ -39,6 +39,10 @@ const DISTRIBUTOR_CODE = "panel-shed";
 /** Query parameter carrying the round-trip configuration, both ways. */
 export const CONFIG_PARAM = "cfg";
 
+/** Query parameter naming which copy of this shop the visitor is reading — the
+ *  address CAD should send him back to (CAD's STOREFRONT_RETURN_PARAM). */
+const RETURN_PARAM = "shop";
+
 const CONFIG_VERSION = "1";
 
 export type OptionChoice = {
@@ -103,14 +107,23 @@ export function decodeConfig(
  * — his door side, his roof slope — instead of redrawing a default shed at his
  * footprint and quietly discarding every choice he made. Without one, the
  * dimensions are how we say "start him at this size".
+ *
+ * `shopOrigin` is WHICH COPY of this shop he is reading. CAD sends everyone
+ * back to the one storefront URL the distributor registered — correct for a
+ * shopper, and the reason a dev storefront's own round trip used to land on the
+ * production shop, where the code being tested does not exist. CAD honours the
+ * claim only for an unroutable address (his machine, or the VPN), so it changes
+ * nothing for a real customer and everything for whoever is building this.
  */
 export function plannerUrl(
   size: ShedSizeSpec,
   groups: OptionGroup[],
   config: StorefrontConfig,
   designCode?: string | null,
+  shopOrigin?: string | null,
 ): string {
   const q = new URLSearchParams({ dcode: DISTRIBUTOR_CODE });
+  if (shopOrigin) q.set(RETURN_PARAM, shopOrigin);
   if (designCode) {
     q.set("design", designCode);
   } else {

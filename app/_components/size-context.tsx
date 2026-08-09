@@ -85,6 +85,11 @@ export function SizeProvider({
   const [sel, setSel] = useState<number[]>(() => options.map(() => 0));
   // The designed shed we are showing and pricing, when there is one.
   const [designCode, setDesignCode] = useState<string | null>(null);
+  // Which copy of this shop the visitor is reading — sent to the planner so it
+  // returns him HERE and not to the one registered production address. Read
+  // after mount like every other browser-only fact below, so the server and the
+  // first client render agree (see the deep-link effect).
+  const [shopOrigin, setShopOrigin] = useState<string | null>(null);
 
   const setChoice = useCallback((groupIdx: number, choiceIdx: number) => {
     setSel((prev) => prev.map((v, i) => (i === groupIdx ? choiceIdx : v)));
@@ -109,10 +114,14 @@ export function SizeProvider({
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
 
+    // Browser-only facts, all read here on purpose: the server cannot know the
+    // address this page is being read at any more than it can know the query.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setShopOrigin(window.location.origin);
+
     // Everything the customer had configured before the planner detour.
     const config = decodeConfig(options, params.get(CONFIG_PARAM));
     if (config) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
       setSel(config.sel);
     }
 
@@ -199,11 +208,17 @@ export function SizeProvider({
       options,
       sel,
       setChoice,
-      plannerUrl: buildPlannerUrl(size, options, { sizeLabel: standard.label, sel }, activeDesign),
+      plannerUrl: buildPlannerUrl(
+        size,
+        options,
+        { sizeLabel: standard.label, sel },
+        activeDesign,
+        shopOrigin,
+      ),
       designCode: activeDesign,
       embedUrl: plannerEmbedUrl(size, activeDesign),
     }),
-    [standard, custom, mode, size, customStatus, options, sel, setChoice, activeDesign],
+    [standard, custom, mode, size, customStatus, options, sel, setChoice, activeDesign, shopOrigin],
   );
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
