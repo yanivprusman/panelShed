@@ -24,15 +24,18 @@ import { lookupDesign } from "@/lib/cad-designs";
  * published ₪400/m² rate; shipping is flat; installation comes from the
  * competitor-verified tier table and is simply unavailable above the top
  * verified tier (the caller then points the customer at us). Dimensions outside
- * CUSTOM_LIMITS are refused rather than quoted — CAD's engineering clamp is
- * wider than what we actually sell.
+ * CUSTOM_LIMITS are quoted WITH A WARNING rather than refused — the bounds say
+ * what we routinely sell, not what can be built, and a refusal left the page
+ * showing the catalogue shed instead of the one the customer designed.
  *
  * Kept server-side so CAD_QUOTE_BASE_URL (an internal address) never ships to
  * the browser.
  */
 export const dynamic = "force-dynamic";
 
-type Ok = { ok: true; size: PricedShedSize; designCode?: string };
+/** `warning` is present when the shed is outside what we routinely sell — it is
+ *  priced and shown all the same, with the caveat said out loud. */
+type Ok = { ok: true; size: PricedShedSize; designCode?: string; warning?: string };
 type Err = { ok: false; error: string; message: string };
 
 function bad(error: string, message: string, status = 400) {
@@ -82,31 +85,6 @@ export async function GET(request: NextRequest) {
   const { minCm, maxCm, minHeightCm, maxHeightCm, maxSqm } = CUSTOM_LIMITS;
   const inRange = (v: number, lo: number, hi: number) => v >= lo && v <= hi;
 
-  // Say what we RECEIVED before saying we won't sell it. A refusal that names
-  // only the rule leaves the customer unable to tell whether his design arrived
-  // at all — and when it is refused, the page falls back to showing the
-  // catalogue shed, so this sentence is the only thing on screen that is about
-  // the shed he actually drew.
-  const designed =
-    `המידות שתכננתם: רוחב ${widthCm} ס"מ · עומק ${depthCm} ס"מ · גובה ${heightCm} ס"מ. `;
-
-  if (!inRange(widthCm, minCm, maxCm) || !inRange(depthCm, minCm, maxCm)) {
-    return bad(
-      "out_of_range",
-      designed +
-        `אנחנו מוכרים מחסנים ברוחב ובעומק שבין ${minCm / 100} ל-${maxCm / 100} מטר. ` +
-        `למידות אחרות — דברו איתנו ונבנה לכם הצעה.`,
-    );
-  }
-  if (!inRange(heightCm, minHeightCm, maxHeightCm)) {
-    return bad(
-      "out_of_range",
-      designed +
-        `אנחנו מוכרים מחסנים בגובה שבין ${minHeightCm / 100} ל-${maxHeightCm / 100} מטר. ` +
-        `לגובה אחר — דברו איתנו ונבנה לכם הצעה.`,
-    );
-  }
-
   const spec = {
     label: customSizeLabel(widthCm, depthCm),
     widthCm,
@@ -115,12 +93,47 @@ export async function GET(request: NextRequest) {
     custom: true as const,
   };
 
-  if (footprintSqm(spec) > maxSqm) {
-    return bad(
-      "out_of_range",
-      designed + `זה גדול מ-${maxSqm} מ"ר. דברו איתנו ונבנה לכם הצעה מותאמת.`,
+  // Outside our standard range is a WARNING, not a refusal (user decision
+  // 2026-08-09). These bounds are what we routinely sell, not what can be
+  // built or priced: CAD draws and costs the shed from its real bill of
+  // materials either way, so refusing to show a number told a customer nothing
+  // except that his design had vanished — the page fell back to the catalogue
+  // shed and the whole screen became about a shed he had not designed.
+  //
+  // Every reason is collected, not just the first: a shed can be both too tall
+  // and too large, and being told one at a time is how a customer discovers the
+  // second only after fixing the first.
+  const warnings: string[] = [];
+  if (!inRange(widthCm, minCm, maxCm) || !inRange(depthCm, minCm, maxCm)) {
+    warnings.push(
+      `הרוחב והעומק שאנחנו מוכרים דרך האתר הם בין ${minCm / 100} ל-${maxCm / 100} מטר`,
     );
   }
+  if (!inRange(heightCm, minHeightCm, maxHeightCm)) {
+    warnings.push(
+      `הגובה שאנחנו מוכרים דרך האתר הוא בין ${minHeightCm / 100} ל-${maxHeightCm / 100} מטר`,
+    );
+  }
+  if (footprintSqm(spec) > maxSqm) {
+    warnings.push(`השטח שאנחנו מוכרים דרך האתר הוא עד ${maxSqm} מ"ר`);
+  }
+
+  // Named dimensions first: the customer has to be able to see that his design
+  // arrived intact before he reads what is unusual about it. The price that
+  // follows is real — a full bill of materials for THIS shed — and the sentence
+  // never promises we will build it, because that is a call a person makes.
+  // "א", "א ו-ב", "א, ב ו-ג" — a Hebrew list takes the vav before the LAST item
+  // only, not before every one of them.
+  const hebrewList = (items: string[]) =>
+    items.length < 2
+      ? items.join("")
+      : `${items.slice(0, -1).join(", ")} ו${items[items.length - 1]}`;
+
+  const warning = warnings.length
+    ? `המידות שתכננתם: רוחב ${widthCm} ס"מ · עומק ${depthCm} ס"מ · גובה ${heightCm} ס"מ. ` +
+      `${hebrewList(warnings)}. המחיר כאן מחושב מרשימת החומרים המלאה של המבנה הזה, ` +
+      `אבל מידה חורגת טעונה אישור שלנו לפני ייצור — דברו איתנו ונוודא שהכול מתאים.`
+    : undefined;
 
   // No fallback: a CAD outage or an unpriced item throws, and the customer is
   // told we can't quote right now — never a made-up or understated number.
@@ -130,7 +143,12 @@ export async function GET(request: NextRequest) {
     const price = designCode
       ? await quoteDesignPrice(designCode)
       : await quoteMaterialsPrice(widthCm, depthCm, heightCm);
-    return NextResponse.json<Ok>({ ok: true, size: { ...spec, price }, designCode: designCode ?? undefined });
+    return NextResponse.json<Ok>({
+      ok: true,
+      size: { ...spec, price },
+      designCode: designCode ?? undefined,
+      warning,
+    });
   } catch (e) {
     console.error("custom-quote failed:", e);
     return bad(

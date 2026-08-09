@@ -39,7 +39,9 @@ import {
 type CustomStatus =
   | { state: "none" }
   | { state: "loading" }
-  | { state: "ready" }
+  /** `warning` is set when the shed is outside the range we routinely sell. It
+   *  is priced and sold all the same — the caveat is said, not enforced. */
+  | { state: "ready"; warning?: string }
   | { state: "error"; message: string };
 
 export type SizeMode = "standard" | "custom";
@@ -166,7 +168,7 @@ export function SizeProvider({
         if (data.ok) {
           setCustom(data.size);
           setDesignCode(data.designCode ?? null);
-          setCustomStatus({ state: "ready" });
+          setCustomStatus({ state: "ready", warning: data.warning });
         } else {
           setCustomStatus({ state: "error", message: data.message });
         }

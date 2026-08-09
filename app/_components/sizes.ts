@@ -97,8 +97,13 @@ export const deliveryInstallPriceFor = (s: ShedSizeSpec): number | null =>
 /**
  * Bounds for a custom footprint arriving from the CAD planner
  * (/?width=&length=&height=, in cm). Deliberately narrower than CAD's own
- * engineering clamp (10–1000cm): this is the range we actually sell as a shed
- * and can price end-to-end. Anything outside is refused rather than quoted.
+ * engineering clamp (10–1000cm): this is the range we routinely sell as a shed.
+ *
+ * Outside them a shed is still shown and still priced from its real bill of
+ * materials — with a warning that the size is unusual and needs our confirmation
+ * (user decision 2026-08-09). These are NOT a statement that a bigger shed
+ * cannot be built or costed; refusing to price one only hid the customer's own
+ * design behind the catalogue shed, which told him nothing.
  */
 export const CUSTOM_LIMITS = {
   minCm: 150,

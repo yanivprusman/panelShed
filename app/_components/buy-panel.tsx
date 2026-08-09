@@ -551,7 +551,29 @@ export default function BuyPanel({
           </a>
         </div>
       )}
-      {size.custom && customStatus.state === "ready" && (
+      {/* Outside the range we routinely sell. The shed is priced and buyable —
+          this says what is unusual about it and that a person confirms it, in
+          place of the refusal that used to hide the customer's own design. */}
+      {size.custom && customStatus.state === "ready" && customStatus.warning && (
+        <div data-id="custom-size-warning" style={noteStyle("#fff8e8", "#f0dcae", "#8a6100")}>
+          <strong data-id="custom-size-warning-lead" style={{ display: "block", marginBottom: 3 }}>
+            מידה חורגת מהסטנדרט
+          </strong>
+          {customStatus.warning}{" "}
+          <a
+            data-id="custom-size-warning-whatsapp"
+            href={whatsappUrl(
+              `שלום, תכננתי מחסן במידות ${size.widthCm}×${size.depthCm} ס"מ, גובה ${heightOf(size)} ס"מ, ואשמח לוודא שאפשר לייצר אותו.`,
+            )}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{ color: "#8a6100", fontWeight: 700 }}
+          >
+            דברו איתנו בוואטסאפ
+          </a>
+        </div>
+      )}
+      {size.custom && customStatus.state === "ready" && !customStatus.warning && (
         <div data-id="custom-size-note" style={noteStyle("#f2f8fd", "#cfe4f5", "#2a6a99")}>
           {`זו המידה שתכננתם במתכנן — ${size.widthCm}×${size.depthCm} ס"מ, גובה ${heightOf(size)} ס"מ. ` +
             `המחיר מחושב מרשימת החומרים המלאה של המבנה הזה. `}
