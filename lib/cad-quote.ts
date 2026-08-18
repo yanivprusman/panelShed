@@ -125,3 +125,74 @@ export async function priceSize(s: ShedSizeSpec): Promise<PricedShedSize> {
 export async function getPricedSizes(): Promise<PricedShedSize[]> {
   return Promise.all(SIZES.map(priceSize));
 }
+
+/**
+ * The shop's own numbers for one design: what the materials sell for, what
+ * they cost us, and what's left. Everything ex-VAT except totalIncVat (the
+ * sticker price) — VAT is remitted, not earned, so profit compares ex-VAT
+ * revenue with ex-VAT cost.
+ *
+ * profit is null while any priced item lacks a cost in CAD's distributor
+ * portal — a partial cost sheet must read as "unknown", never as a higher
+ * profit. missingCosts names the items to go fill in.
+ */
+export type DesignProfitQuote = {
+  totalIncVat: number;
+  totalExVat: number;
+  totalCost: number;
+  profit: number | null;
+  missingCosts: string[];
+};
+
+type ProfitQuoteResponse = QuoteResponse & {
+  totalExVat?: number;
+  totalCost?: number;
+  profit?: number | null;
+  missingCosts?: string[];
+};
+
+/**
+ * ADMIN-ONLY: quote a design with the panel-shed distributor's private
+ * cost/profit numbers. Authenticates to CAD with CAD_DISTRIBUTOR_TOKEN
+ * (base64 distributorId:code) — required, and the numbers it unlocks must
+ * never reach a customer-facing page. Uncached: the admin wants the sheet
+ * as it is now, not as it was an hour ago.
+ */
+export async function quoteDesignProfit(designCode: string): Promise<DesignProfitQuote> {
+  const token = process.env.CAD_DISTRIBUTOR_TOKEN;
+  if (!token) {
+    throw new Error(
+      "CAD_DISTRIBUTOR_TOKEN is not set — the admin profit view needs the panel-shed distributor's CAD token",
+    );
+  }
+  const url = `${quoteBaseUrl()}/api/quote?code=panel-shed&design=${encodeURIComponent(designCode)}`;
+  const res = await fetch(url, {
+    headers: { Authorization: `Bearer ${token}` },
+    cache: "no-store",
+  });
+  if (!res.ok) {
+    throw new Error(`CAD profit quote failed (${res.status}) for design ${designCode}`);
+  }
+  const data = (await res.json()) as ProfitQuoteResponse;
+  if (!data.success || typeof data.total !== "number") {
+    throw new Error(`CAD profit quote failed for design ${designCode}: ${data.error ?? "no total"}`);
+  }
+  if (data.missing && data.missing.length > 0) {
+    throw new Error(
+      `CAD profit quote for design ${designCode} is missing distributor prices: ${data.missing.join(", ")}`,
+    );
+  }
+  if (typeof data.totalExVat !== "number" || typeof data.totalCost !== "number" || data.profit === undefined) {
+    // The response has a total but no cost block: CAD rejected the token.
+    throw new Error(
+      `CAD did not release cost data for design ${designCode} — CAD_DISTRIBUTOR_TOKEN is wrong or stale`,
+    );
+  }
+  return {
+    totalIncVat: data.total,
+    totalExVat: data.totalExVat,
+    totalCost: data.totalCost,
+    profit: data.profit,
+    missingCosts: data.missingCosts ?? [],
+  };
+}

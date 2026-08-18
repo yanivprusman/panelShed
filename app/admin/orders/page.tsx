@@ -1,5 +1,7 @@
 import { listOrders, type Order, type PaymentStatus } from "@/lib/orders";
 import { designUrl } from "@/app/_components/planner";
+import { SIZES } from "@/app/_components/sizes";
+import { quoteDesignProfit, type DesignProfitQuote } from "@/lib/cad-quote";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -36,6 +38,60 @@ function fmtDate(iso: string): string {
   return iso.replace("T", " ").slice(0, 16);
 }
 
+/**
+ * Materials profit per design, for the admin's eyes: CAD's quote with the
+ * panel-shed distributor token. Each design either resolves to numbers or to
+ * the error that stopped it — an unreachable CAD or a stale token shows AS
+ * an error in its cell, it never silently drops the column.
+ */
+type ProfitCell = { quote: DesignProfitQuote } | { error: string };
+
+async function quoteProfits(designCodes: string[]): Promise<Map<string, ProfitCell>> {
+  const unique = [...new Set(designCodes)];
+  const cells = await Promise.all(
+    unique.map(async (code): Promise<[string, ProfitCell]> => {
+      try {
+        return [code, { quote: await quoteDesignProfit(code) }];
+      } catch (e) {
+        return [code, { error: e instanceof Error ? e.message : String(e) }];
+      }
+    }),
+  );
+  return new Map(cells);
+}
+
+function ProfitValue({ cell }: { cell: ProfitCell | undefined }) {
+  if (!cell) return <span style={{ color: "#bbb" }}>—</span>;
+  if ("error" in cell) {
+    return (
+      <span data-id="profit-error" title={cell.error} style={{ color: "#c0392b", fontSize: 12 }}>
+        שגיאה
+      </span>
+    );
+  }
+  const q = cell.quote;
+  if (q.profit === null) {
+    return (
+      <span
+        data-id="profit-missing-costs"
+        title={`חסרה עלות עבור: ${q.missingCosts.join(", ")}`}
+        style={{ color: "#d39e00", fontSize: 12, whiteSpace: "nowrap" }}
+      >
+        חסרות עלויות ({q.missingCosts.length})
+      </span>
+    );
+  }
+  return (
+    <span
+      data-id="profit-value"
+      dir="ltr"
+      style={{ color: q.profit >= 0 ? "#1e9e54" : "#c0392b", fontWeight: 700, whiteSpace: "nowrap" }}
+    >
+      {ils(q.profit)}
+    </span>
+  );
+}
+
 export default async function AdminOrdersPage({
   searchParams,
 }: {
@@ -52,6 +108,12 @@ export default async function AdminOrdersPage({
     .filter((o) => o.paymentStatus === "paid")
     .reduce((s, o) => s + (o.paidSum ?? o.totalIls ?? 0), 0);
 
+  // Materials profit — the catalogue sheds plus every design that was ordered,
+  // quoted once each (several orders of the same design share one quote).
+  const catalogueCodes = SIZES.flatMap((s) => (s.designCode ? [s.designCode] : []));
+  const orderCodes = orders.flatMap((o) => (o.designCode ? [o.designCode] : []));
+  const profits = await quoteProfits([...catalogueCodes, ...orderCodes]);
+
   return (
     <main data-id="admin-orders" dir="rtl" style={{ maxWidth: 1100, margin: "0 auto", padding: "28px 18px", fontFamily: "inherit" }}>
       <h1 data-id="admin-title" style={{ fontSize: 24, fontWeight: 800, color: "#2f8fd6", margin: "0 0 6px" }}>
@@ -60,6 +122,44 @@ export default async function AdminOrdersPage({
       <p data-id="admin-summary" style={{ color: "#666", fontSize: 14, margin: "0 0 20px" }}>
         {orders.length} הזמנות · {paidCount} שולמו · הכנסה מאומתת {ils(revenue)}
       </p>
+
+      {/* What the catalogue shed earns on its materials, live from the CAD
+          price sheet: sticker price (incl. VAT) vs. our ex-VAT cost. Add-ons
+          (הובלה/הרכבה/רצפה) are not costed there, so this is materials only. */}
+      <section data-id="admin-profit" style={{ margin: "0 0 24px" }}>
+        <h2 data-id="admin-profit-title" style={{ fontSize: 16, fontWeight: 800, color: "#333", margin: "0 0 8px" }}>
+          רווח חומרים (לפי מחירון CAD)
+        </h2>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
+          {SIZES.map((s) => {
+            const cell = s.designCode ? profits.get(s.designCode) : undefined;
+            const q = cell && "quote" in cell ? cell.quote : undefined;
+            return (
+              <div
+                key={s.label}
+                data-id="admin-profit-card"
+                style={{ border: "1px solid #e8e8e8", borderRadius: 10, padding: "12px 16px", background: "#fff", minWidth: 260 }}
+              >
+                <div style={{ fontWeight: 700, marginBottom: 6 }}>מחסן {s.label}</div>
+                {q ? (
+                  <div style={{ fontSize: 13.5, color: "#555", display: "grid", gap: 2 }}>
+                    <div>מחיר חומרים: <b dir="ltr">{ils(Math.round(q.totalIncVat))}</b> (לפני מע״מ <span dir="ltr">{ils(Math.round(q.totalExVat))}</span>)</div>
+                    <div>עלות חומרים (לפני מע״מ): <b dir="ltr">{ils(Math.round(q.totalCost))}</b></div>
+                    <div>
+                      רווח: <ProfitValue cell={cell} />
+                      {q.profit !== null && q.totalExVat > 0 ? (
+                        <span style={{ color: "#888", fontSize: 12 }}> ({Math.round((q.profit / q.totalExVat) * 100)}%)</span>
+                      ) : null}
+                    </div>
+                  </div>
+                ) : (
+                  <ProfitValue cell={cell} />
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </section>
 
       {orders.length === 0 ? (
         <p data-id="admin-empty" style={{ color: "#888" }}>אין הזמנות עדיין.</p>
@@ -74,6 +174,7 @@ export default async function AdminOrdersPage({
                 <th style={th}>טלפון</th>
                 <th style={th}>מוצר</th>
                 <th style={th}>סכום</th>
+                <th style={th}>רווח חומרים</th>
                 <th style={th}>פרטים</th>
               </tr>
             </thead>
@@ -109,6 +210,11 @@ export default async function AdminOrdersPage({
                     </td>
                     <td style={cell}>{o.title}</td>
                     <td style={{ ...cell, fontWeight: 700 }} dir="ltr">{ils(o.paidSum ?? o.totalIls)}</td>
+                    <td style={cell}>
+                      {/* Materials only — the order total also carries add-ons
+                          (הובלה/הרכבה/רצפה) that have no cost sheet. */}
+                      <ProfitValue cell={o.designCode ? profits.get(o.designCode) : undefined} />
+                    </td>
                     <td style={{ ...cell, color: "#777", fontSize: 12.5, maxWidth: 280 }}>
                       {o.notes ? <div>📝 {o.notes}</div> : null}
                       {/* The shed that was sold. Opens in the planner with the
