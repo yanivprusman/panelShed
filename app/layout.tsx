@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Script from "next/script";
 import "./globals.css";
 import FeedbackChatClient from "./feedback-chat-client";
 import GoogleAdsTag from "./_components/google-ads-tag";
@@ -69,6 +70,7 @@ export default function RootLayout({
         </a>
         {children}
         <FeedbackChatClient />
+        <Script src="/gova-track.js" strategy="afterInteractive" />
       </body>
     </html>
   );

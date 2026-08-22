@@ -27,6 +27,14 @@ const nextConfig: NextConfig = {
   ],
   turbopack: { root: turbopackRoot },
   transpilePackages: ['@claudecontrol/feedback-lib', '@addnewfeature/feedback-lib-launcher'],
+  // The storefront is the "panelshed" niche of the גובה דרום venture. Its
+  // analytics beacon (public/gova-track.js) posts same-origin to /api/gova/*,
+  // proxied here to the govaBoard collector on the NUC over WireGuard — same
+  // pattern as the apex nginx proxy the landers use, so the browser never
+  // makes a cross-origin request.
+  async rewrites() {
+    return [{ source: '/api/gova/:path*', destination: 'http://10.7.0.1:3125/api/:path*' }];
+  },
 };
 
 export default nextConfig;
