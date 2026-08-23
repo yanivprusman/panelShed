@@ -15,7 +15,7 @@ import FaqSection, { FAQ_ITEMS } from "./_components/faq";
 import { FloatingWhatsApp } from "./_components/whatsapp-cta";
 
 const galleryImages = [
-  "/products/lehamhasha.png",
+  "/products/real-installation.jpg",
   "/products/panel-shed-render.png",
 ];
 
@@ -42,8 +42,8 @@ const buildJsonLd = (lowestPrice: number) => ({
       "@type": "Product",
       name: "מחסן גינה פאנל מבודד",
       image: [
+        `${SITE_URL}/products/real-installation.jpg`,
         `${SITE_URL}/products/panel-shed-render.png`,
-        `${SITE_URL}/products/lehamhasha.png`,
       ],
       description:
         'מחסן גינה מפאנל מבודד בעובי 5 ס"מ — חסין לפגעי מזג אוויר, בידוד וגימור ברמה גבוהה, מיוצר בישראל. משמש כמחסן, משרד, חדר עבודה ועוד.',

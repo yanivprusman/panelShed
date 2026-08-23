@@ -33,9 +33,9 @@ export const metadata: Metadata = {
     description: SITE_DESCRIPTION,
     images: [
       {
-        url: "/products/lehamhasha.png",
-        width: 1408,
-        height: 768,
+        url: "/products/real-installation.jpg",
+        width: 2000,
+        height: 1500,
         alt: "מחסן גינה פאנל מבודד",
       },
     ],
@@ -44,7 +44,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: `מחסן גינה פאנל מבודד — ${SITE_NAME}`,
     description: SITE_DESCRIPTION,
-    images: ["/products/lehamhasha.png"],
+    images: ["/products/real-installation.jpg"],
   },
   robots: {
     index: true,

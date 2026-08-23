@@ -37,8 +37,8 @@ function itemXml(s: PricedShedSize): string {
       <g:title>${esc(title)}</g:title>
       <g:description>${esc(description)}</g:description>
       <g:link>${esc(link)}</g:link>
-      <g:image_link>${SITE_URL}/products/panel-shed-render.png</g:image_link>
-      <g:additional_image_link>${SITE_URL}/products/lehamhasha.png</g:additional_image_link>
+      <g:image_link>${SITE_URL}/products/real-installation.jpg</g:image_link>
+      <g:additional_image_link>${SITE_URL}/products/panel-shed-render.png</g:additional_image_link>
       <g:availability>in_stock</g:availability>
       <g:price>${s.price}.00 ILS</g:price>
       <g:condition>new</g:condition>
