@@ -27,7 +27,7 @@ const nextConfig: NextConfig = {
   ],
   turbopack: { root: turbopackRoot },
   transpilePackages: ['@claudecontrol/feedback-lib', '@addnewfeature/feedback-lib-launcher'],
-  // The storefront is the "panelshed" niche of the גובה דרום venture. Its
+  // The storefront is the "panelshed" niche of the ג.ח. פרוייקטים venture. Its
   // analytics beacon (public/gova-track.js) posts same-origin to /api/gova/*,
   // proxied here to the govaBoard collector on the NUC over WireGuard — same
   // pattern as the apex nginx proxy the landers use, so the browser never

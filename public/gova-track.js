@@ -1,5 +1,5 @@
 /* govaBoard analytics beacon — the panelShed edition of bizSites' gova-track.js.
-   The storefront is one niche ("panelshed") of the גובה דרום venture, so its
+   The storefront is one niche ("panelshed") of the ג.ח. פרוייקטים venture, so its
    traffic and CTA clicks land in the same first-party collector as the landers.
    Posts same-origin to /api/gova/track, which next.config.ts rewrites to the
    govaBoard instance on the NUC — no CORS, no third parties, no cookies beyond
