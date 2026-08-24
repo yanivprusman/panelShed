@@ -229,6 +229,7 @@ export function SizeProvider({
       // named the unpriced one would be a link to a different order than the
       // one on screen.
       shareUrl: shopConfigUrl(
+        shopOrigin,
         options,
         { sizeLabel: standard.label, sel },
         sellingCustom ? { size, designCode: activeDesign } : null,

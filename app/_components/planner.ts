@@ -175,12 +175,20 @@ export function plannerEmbedUrl(size: ShedSizeSpec, designCode?: string | null):
  * frames the standard shed as something the customer drew, which is a lie
  * told by a URL.
  *
- * Always rooted at SITE_URL, never at the address this page happens to be
- * open at. A link is made to be sent, and the copy of the shop a customer can
- * open is the public one — the dev host is behind a sign-in wall he will
- * never get through, and localhost is not a place he can go at all.
+ * Rooted at the copy of the shop being READ — dev links out of the dev shop,
+ * production links out of the production one. A copy of this shop that hands
+ * out another copy's address is how a dev round trip ends up on the production
+ * site: you change something here, share it, and the link tests the code you
+ * did not touch. One shop, one world, all the way through.
+ *
+ * `origin` is null until the browser says otherwise (the server cannot know the
+ * address a page is being read at), and SITE_URL — the canonical public shop —
+ * stands in for that first render. Not a fallback for a failure: it is the only
+ * true answer available before hydration, and the button that copies this is
+ * not usable until after it.
  */
 export function shopConfigUrl(
+  origin: string | null,
   groups: OptionGroup[],
   config: StorefrontConfig,
   designed: { size: ShedSizeSpec; designCode: string | null } | null,
@@ -194,7 +202,7 @@ export function shopConfigUrl(
     q.set("height", String(heightOf(designed.size)));
   }
   q.set(CONFIG_PARAM, encodeConfig(groups, config));
-  return `${SITE_URL}/?${q.toString()}`;
+  return `${(origin ?? SITE_URL).replace(/\/$/, "")}/?${q.toString()}`;
 }
 
 /**

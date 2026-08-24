@@ -138,15 +138,27 @@ feeds two things, both from the state that prices the card: the
 "העתיקו קישור לתצורה הזו" button, and the WhatsApp CTA message (which lists every
 choice, the free ones included — `ריצפה: ללא` is part of the order).
 
-Rooted at `SITE_URL`, never at the host the page is open at: a link is made to be
-sent, and a `*.dev.ya-niv.com` address is behind a sign-in wall the recipient
-will never pass.
+Rooted at the copy of the shop being READ (`window.location.origin`; `SITE_URL`
+stands in for the first server render, before the browser has said). A shop that
+handed out another copy's address is how a dev link ends up testing production.
 
-**The return leg from a dev shop lands on PROD.** CAD honours the `shop=` claim
-only for an unroutable origin (localhost / 10.x — see `resolveStorefrontReturnUrl`),
-so a round trip started at `panelshed.dev.ya-niv.com` comes back to the
-registered `panelshed.prod.ya-niv.com`. To keep a round trip inside dev, browse
-the shop at `http://10.7.0.2:3089` instead.
+**One world, all the way through.** Every leg of the trip stays in the world it
+started in:
+
+| leg | dev | prod |
+|---|---|---|
+| planner link + 3D embed (`NEXT_PUBLIC_CAD_BASE_URL`) | cad.dev.ya-niv.com | diy-cad.com |
+| materials quote (`CAD_QUOTE_BASE_URL`, server-side) | localhost:3001 | localhost:3000 |
+| return from "הזמינו במידות האלה" | back to the dev shop | back to the prod shop |
+| copy-link / WhatsApp link | the dev shop | the prod shop |
+
+The return leg is the one that needed CAD's permission: a distributor registers
+only a production `storefront_url`, so a dev round trip used to come home to
+production. `cad-dev` now lists this shop in `NEXT_PUBLIC_STOREFRONT_RETURN_ORIGINS`
+(see `cad/web/lib/storefront-url.ts`), and **diy-cad.com leaves that empty** — so
+production still returns a real customer only to the registered address. Verified
+2026-08-24 both ways: dev planner + dev claim → dev shop; prod planner + the same
+dev claim → prod shop.
 
 The `id`s on `product.options` in `app/page.tsx` travel in customer-facing URLs —
 rename a **label** freely, never an **id** (a rename strands anyone mid-trip; the
