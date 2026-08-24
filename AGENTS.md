@@ -115,6 +115,39 @@ dimensions" link (`cad/web/lib/storefront-url.ts`, `STOREFRONT_CONFIG_PARAM`).
 `SizeProvider` restores it on arrival, so a customer who had already picked
 הובלה והרכבה + במת דק comes back to a configured card instead of an empty one.
 
+## Two CAD addresses, and only one of them may be localhost
+
+| var | read by | dev value | why |
+|---|---|---|---|
+| `CAD_QUOTE_BASE_URL` | the Next **server** (`lib/cad-quote.ts`, `lib/cad-designs.ts`, `/api/*`) | `http://localhost:3001` | the server really is next to cad-dev; keeping it internal is why the address never ships to a browser |
+| `NEXT_PUBLIC_CAD_BASE_URL` | the **visitor's browser** (planner link + 3D embed, `_components/planner.ts`) | `https://cad.dev.ya-niv.com` | must be reachable from the device READING the page |
+
+**Never point `NEXT_PUBLIC_CAD_BASE_URL` at localhost.** It resolves silently to
+port 3001 of whatever device is reading the page — nothing on a phone, someone
+else's app on another workstation. It was `http://localhost:3001` until
+2026-08-24, so opening the dev shop at `panelshed.dev.ya-niv.com` from anything
+but the desktop it runs on sent "מידה מותאמת אישית" to a dead address and left
+the 3D box blank. The two vars look interchangeable and are not.
+
+## Sharing a configured order
+
+`shopConfigUrl()` (`_components/planner.ts`) builds the link BACK to this shop
+carrying the shed and every add-on — the same grammar `SizeProvider`'s deep-link
+effect reads, so a produced link reopens the exact card it was copied from. It
+feeds two things, both from the state that prices the card: the
+"העתיקו קישור לתצורה הזו" button, and the WhatsApp CTA message (which lists every
+choice, the free ones included — `ריצפה: ללא` is part of the order).
+
+Rooted at `SITE_URL`, never at the host the page is open at: a link is made to be
+sent, and a `*.dev.ya-niv.com` address is behind a sign-in wall the recipient
+will never pass.
+
+**The return leg from a dev shop lands on PROD.** CAD honours the `shop=` claim
+only for an unroutable origin (localhost / 10.x — see `resolveStorefrontReturnUrl`),
+so a round trip started at `panelshed.dev.ya-niv.com` comes back to the
+registered `panelshed.prod.ya-niv.com`. To keep a round trip inside dev, browse
+the shop at `http://10.7.0.2:3089` instead.
+
 The `id`s on `product.options` in `app/page.tsx` travel in customer-facing URLs —
 rename a **label** freely, never an **id** (a rename strands anyone mid-trip; the
 version prefix makes a mismatch ignore the whole `cfg` rather than half-apply it).
