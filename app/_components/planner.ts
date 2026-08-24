@@ -1,4 +1,5 @@
 import { heightOf, metersLabel, type ShedSizeSpec } from "./sizes";
+import { SITE_URL } from "@/lib/site";
 
 /**
  * The planner round trip.
@@ -154,6 +155,46 @@ export function plannerEmbedUrl(size: ShedSizeSpec, designCode?: string | null):
         height: String(heightOf(size)),
       });
   return `${CAD_BASE}/?${q.toString()}`;
+}
+
+/**
+ * The link back to THIS shop with everything on screen already chosen — the
+ * shed being sold and every add-on beside it. What you send a customer when
+ * you have configured his order for him, and what he sends a friend.
+ *
+ * It is the inbound half of the same grammar the deep-link effect reads
+ * (see ./size-context.tsx), and it names the shed the same three ways that
+ * effect understands, in the same order of authority:
+ *
+ *   a designed shed with a code  -> ?design=<code>   (the shed, entire)
+ *   a designed shed without one  -> ?width&length&height  (a footprint)
+ *   the catalogue shed           -> nothing; `cfg` already carries the SKU
+ *
+ * The catalogue shed deliberately does NOT travel as its design code even
+ * though it has one: a `design=` link puts the shop into custom mode and
+ * frames the standard shed as something the customer drew, which is a lie
+ * told by a URL.
+ *
+ * Always rooted at SITE_URL, never at the address this page happens to be
+ * open at. A link is made to be sent, and the copy of the shop a customer can
+ * open is the public one — the dev host is behind a sign-in wall he will
+ * never get through, and localhost is not a place he can go at all.
+ */
+export function shopConfigUrl(
+  groups: OptionGroup[],
+  config: StorefrontConfig,
+  designed: { size: ShedSizeSpec; designCode: string | null } | null,
+): string {
+  const q = new URLSearchParams();
+  if (designed?.designCode) {
+    q.set("design", designed.designCode);
+  } else if (designed) {
+    q.set("width", String(designed.size.widthCm));
+    q.set("length", String(designed.size.depthCm));
+    q.set("height", String(heightOf(designed.size)));
+  }
+  q.set(CONFIG_PARAM, encodeConfig(groups, config));
+  return `${SITE_URL}/?${q.toString()}`;
 }
 
 /**

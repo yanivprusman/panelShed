@@ -51,3 +51,13 @@ export function CheckIcon({ size = 18 }: { size?: number }) {
     </svg>
   );
 }
+
+/** Chain link — the "copy this configuration's link" affordance. */
+export function LinkIcon({ size = 18, color = "currentColor" }: { size?: number; color?: string }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.8" strokeLinecap="round">
+      <path d="M10 13a5 5 0 0 0 7.07 0l2.83-2.83a5 5 0 0 0-7.07-7.07L11.5 4.5" />
+      <path d="M14 11a5 5 0 0 0-7.07 0L4.1 13.83a5 5 0 0 0 7.07 7.07l1.3-1.3" />
+    </svg>
+  );
+}

@@ -158,6 +158,21 @@ textarea:focus-visible,
   box-shadow: 0 8px 24px rgba(37, 211, 102, 0.55);
 }
 
+/* "העתיקו קישור לתצורה הזו" — a quiet third button under the two CTAs: this is
+   how you hand an order to someone else, not how you place one. */
+.share-btn {
+  background: #fff;
+  border: 1px solid #d8dde0;
+  color: #4a4a4a;
+  transition: background 140ms ease, border-color 140ms ease, color 140ms ease;
+}
+
+.share-btn:hover {
+  background: #f5f9fc;
+  border-color: #2f8fd6;
+  color: #2f8fd6;
+}
+
 /* CAD planner embed: taller on desktop, shorter on phones. */
 .cad-iframe {
   display: block;

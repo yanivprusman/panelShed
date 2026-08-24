@@ -18,7 +18,7 @@ import {
 import { sizeSummary, type OptionChoice as Choice } from "./planner";
 import { DesignDetails } from "./design-details";
 import { whatsappUrl } from "./contact";
-import { WhatsAppIcon, CheckIcon } from "./icons";
+import { WhatsAppIcon, CheckIcon, LinkIcon } from "./icons";
 import { reportLead } from "@/lib/gtag";
 
 const ils = (n: number) => `₪ ${n.toLocaleString("he-IL")}`;
@@ -182,12 +182,22 @@ export default function BuyPanel({
     sel,
     setChoice,
     plannerUrl,
+    shareUrl,
     designCode,
   } = useSize();
   const base = size.price;
   const title = productTitle(size.label);
 
   const [open, setOpen] = useState(false);
+  /**
+   * The last copy attempt, remembered WITH the link it was about.
+   *
+   * Keyed by url and compared below rather than cleared by an effect: change a
+   * dropdown after copying and the clipboard still holds the previous link, so
+   * a bare "copied ✓" would be a lie told by the one control whose whole job is
+   * that the link matches the screen. A mismatch simply stops being a result.
+   */
+  const [copyResult, setCopyResult] = useState<{ url: string; ok: boolean } | null>(null);
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
@@ -302,7 +312,59 @@ export default function BuyPanel({
   }, 0);
   const newTotal = base + addons;
 
-  const askWhatsappUrl = whatsappUrl("שלום, אשמח לקבל פרטים על " + title);
+  /**
+   * The configuration in words — every line of it, the free choices included.
+   *
+   * "ריצפה: ללא" is as much of the order as "במת דק — ₪7,000": a shed quoted
+   * without a floor and a shed nobody remembered to ask about a floor for read
+   * identically once the word is missing, and that ambiguity is settled on the
+   * phone, badly, days later. A priced choice speaks for itself and needs no
+   * group name in front of it; a free one is only intelligible with it.
+   */
+  const configLines = useMemo(() => {
+    const lines = [`${sizeSummary(size)} — ${ils(base)}`];
+    chosen.forEach((c, i) => {
+      const { price, available } = resolve(c);
+      if (!available) return;
+      const group = (options[i]?.label ?? "").replace(/\s*:\s*$/, "");
+      lines.push(price != null ? `${c.label} — ${ils(price)}` : `${group}: ${c.label}`);
+    });
+    lines.push(`סה"כ ${ils(newTotal)} כולל מע"מ`);
+    return lines;
+  }, [size, base, chosen, options, resolve, newTotal]);
+
+  /**
+   * The WhatsApp message: the whole order, then the link that reproduces it.
+   *
+   * The text is for the person reading the chat; the link is for the shop,
+   * which reopens on this exact shed with these exact add-ons and a working
+   * pay button. Sending only the product title — which is all this said before
+   * — threw away every choice the sender had just made and started the
+   * conversation from "which shed did you mean?".
+   */
+  const configMessage = useMemo(
+    () => ["שלום, אשמח לקבל פרטים על " + title, ...configLines, "", shareUrl].join("\n"),
+    [title, configLines, shareUrl],
+  );
+
+  const askWhatsappUrl = whatsappUrl(configMessage);
+
+  /**
+   * Copy the link, and say which of the two things happened. The clipboard is
+   * refused often enough (an insecure origin, a browser that wants a fresher
+   * gesture) that a silent failure would have the sender paste whatever was in
+   * the clipboard before — so the link itself is revealed either way, and the
+   * note below the button states the outcome instead of implying it.
+   */
+  async function copyShareUrl() {
+    const url = shareUrl;
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopyResult({ url, ok: true });
+    } catch {
+      setCopyResult({ url, ok: false });
+    }
+  }
 
   /**
    * The size selector. Picking "custom" before anything has been designed is a
@@ -646,6 +708,68 @@ export default function BuyPanel({
       >
         {buyLabel}
       </button>
+
+      {/* Hand this exact order to someone else — the size, the add-ons and the
+          price, in a link that reopens the shop on all three with a working pay
+          button. The quiet third button on purpose: it belongs to whoever is
+          configuring an order FOR somebody, not to the two CTAs that place one. */}
+      <div data-id="share-config" style={{ marginTop: 12 }}>
+        <button
+          type="button"
+          data-id="copy-config-link"
+          onClick={copyShareUrl}
+          className="share-btn"
+          style={{
+            width: "100%",
+            boxSizing: "border-box",
+            borderRadius: 8,
+            padding: 12,
+            fontFamily: "inherit",
+            fontSize: 15,
+            fontWeight: 600,
+            cursor: "pointer",
+            display: "inline-flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 9,
+          }}
+        >
+          <LinkIcon size={18} />
+          העתיקו קישור לתצורה הזו
+        </button>
+        {copyResult?.url === shareUrl && (
+          <div data-id="share-config-result" style={{ marginTop: 9 }}>
+            <p
+              data-id="share-config-note"
+              style={{ margin: "0 0 6px", fontSize: 13, fontWeight: 600, color: copyResult.ok ? "#1e8e4a" : "#a33" }}
+            >
+              {copyResult.ok
+                ? "הקישור הועתק ✓ אפשר להדביק אותו בוואטסאפ, במייל או בהודעה"
+                : "הדפדפן חסם את ההעתקה — סמנו את הקישור והעתיקו ידנית:"}
+            </p>
+            <input
+              data-id="share-config-url"
+              readOnly
+              value={shareUrl}
+              dir="ltr"
+              aria-label="קישור לתצורה"
+              onFocus={(e) => e.currentTarget.select()}
+              style={{
+                width: "100%",
+                boxSizing: "border-box",
+                padding: "9px 11px",
+                border: "1px solid #d8dde0",
+                borderRadius: 7,
+                background: "#f7f9fa",
+                fontFamily: "inherit",
+                fontSize: 12.5,
+                color: "#555",
+                textOverflow: "ellipsis",
+              }}
+            />
+          </div>
+        )}
+      </div>
 
       <p data-id="delivery-note" style={{ margin: "14px 0 0", fontSize: 13.5, color: "#777", lineHeight: 1.5 }}>
         {delivery}

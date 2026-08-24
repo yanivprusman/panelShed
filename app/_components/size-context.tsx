@@ -15,6 +15,7 @@ import {
   decodeConfig,
   plannerUrl as buildPlannerUrl,
   plannerEmbedUrl,
+  shopConfigUrl,
   type OptionGroup,
 } from "./planner";
 
@@ -62,6 +63,9 @@ type SizeCtx = {
   setChoice: (groupIdx: number, choiceIdx: number) => void;
   /** Full planner deep-link for the current configuration (the outbound leg). */
   plannerUrl: string;
+  /** This shop, at everything currently on screen — the link to send someone.
+   *  Built from the same state as the price, so the two cannot disagree. */
+  shareUrl: string;
   /** The CAD design being sold right now — the visitor's if they designed one,
    *  the catalogue shed's own otherwise. The identity everything else agrees on. */
   designCode: string | null;
@@ -192,12 +196,15 @@ export function SizeProvider({
   // agree about which shed this is — the price, the 3D frame, the planner link,
   // the order — reads this and only this, so none of them can be about a
   // different shed than the others.
-  const activeDesign =
-    (mode === "custom" && custom ? designCode : standard?.designCode) ?? null;
+  //
   // "custom" only sells a shed once it has a real price; until then (loading, or
   // a quote we couldn't get) the standard shed is what's priced on the card,
-  // while the selector still shows the custom row plus its status note.
-  const size = mode === "custom" && custom ? custom : standard;
+  // while the selector still shows the custom row plus its status note. That
+  // one condition decides WHICH shed this is, so it is written once and every
+  // reader below asks it rather than restating it.
+  const sellingCustom = mode === "custom" && custom !== null;
+  const size = sellingCustom ? custom : standard;
+  const activeDesign = (sellingCustom ? designCode : standard?.designCode) ?? null;
 
   const value = useMemo<SizeCtx>(
     () => ({
@@ -217,10 +224,19 @@ export function SizeProvider({
         activeDesign,
         shopOrigin,
       ),
+      // `sellingCustom`, not `mode`: while a design is still being priced the
+      // standard shed is what the card shows and charges for, and a link that
+      // named the unpriced one would be a link to a different order than the
+      // one on screen.
+      shareUrl: shopConfigUrl(
+        options,
+        { sizeLabel: standard.label, sel },
+        sellingCustom ? { size, designCode: activeDesign } : null,
+      ),
       designCode: activeDesign,
       embedUrl: plannerEmbedUrl(size, activeDesign),
     }),
-    [standard, custom, mode, size, customStatus, options, sel, setChoice, activeDesign, shopOrigin],
+    [standard, custom, mode, size, sellingCustom, customStatus, options, sel, setChoice, activeDesign, shopOrigin],
   );
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
