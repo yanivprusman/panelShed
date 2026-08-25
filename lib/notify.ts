@@ -134,10 +134,23 @@ async function emailOwner(order: Order, event: OrderEvent): Promise<void> {
 }
 
 /**
- * WhatsApp the owner via the NUC bot bridge (whatsapp-bridge-bot on
- * 127.0.0.1:8081, POST /api/send). Runs ON the leader via execOnPeer, mirroring
+ * WhatsApp the owner via the NUC PERSONAL bridge (whatsapp-bridge on
+ * 127.0.0.1:8080, POST /api/send). Runs ON the leader via execOnPeer, mirroring
  * the email path. The {recipient,message} JSON is base64-transported and decoded
  * on the NUC, so customer-controlled text (name/notes) never touches a shell.
+ *
+ * This used to go through a SECOND WhatsApp account — the "bot", 0559448186, on
+ * its own bridge at :8081 — for exactly one reason: a message you send to
+ * yourself raises no notification, and the bot's did. The buzz cost a second
+ * WhatsApp session to keep alive, and that session is what kept dying: logged
+ * out 2026-07-24, dead again from about 2026-07-10 for six weeks. Retired
+ * 2026-08-26 at the owner's decision — he reads the ops group when he opens it
+ * and does not need it to buzz. One account, one session, nothing maintained
+ * for a notification he did not want.
+ *
+ * The order alert is therefore a message from the owner to his own group. It is
+ * silent by design, and panelShedMonitor's lead detector cannot mistake it for a
+ * customer (it takes only is_from_me = 0, and only direct chats).
  *
  * The bridge requires "Authorization: Bearer <token>" on every /api/* request
  * (401 otherwise — this silently ate the first real order notification on
@@ -146,8 +159,8 @@ async function emailOwner(order: Order, event: OrderEvent): Promise<void> {
  * the wire. We also verify the bridge's JSON answer — a delivered HTTP response
  * is not a delivered message.
  */
-const BOT_BRIDGE_TOKEN_FILE =
-  "/opt/automateLinux/mcpServers/whatsapp/whatsapp-bridge-bot/store/.bridge-token";
+const BRIDGE_TOKEN_FILE =
+  "/opt/automateLinux/mcpServers/whatsapp/whatsapp-bridge/store/.bridge-token";
 
 async function whatsappOwner(order: Order, event: OrderEvent): Promise<void> {
   const payload = JSON.stringify({
@@ -155,7 +168,7 @@ async function whatsappOwner(order: Order, event: OrderEvent): Promise<void> {
     message: orderBody(order, event),
   });
   const b64 = Buffer.from(payload, "utf8").toString("base64");
-  const shellCmd = `printf %s '${b64}' | base64 -d | curl -sS -f -X POST http://127.0.0.1:8081/api/send -H "Authorization: Bearer $(cat ${BOT_BRIDGE_TOKEN_FILE})" -H 'Content-Type: application/json' --data-binary @-`;
+  const shellCmd = `printf %s '${b64}' | base64 -d | curl -sS -f -X POST http://127.0.0.1:8080/api/send -H "Authorization: Bearer $(cat ${BRIDGE_TOKEN_FILE})" -H 'Content-Type: application/json' --data-binary @-`;
   const reply = await sendDaemonCommand({
     command: "execOnPeer",
     peer: "leader",
@@ -163,16 +176,16 @@ async function whatsappOwner(order: Order, event: OrderEvent): Promise<void> {
     shellCmd,
   });
   if (!reply.includes('"success":true')) {
-    throw new Error(`bot bridge did not confirm delivery: ${reply.slice(0, 300)}`);
+    throw new Error(`WhatsApp bridge did not confirm delivery: ${reply.slice(0, 300)}`);
   }
   console.log(`[notify] owner WhatsApp'd (${event}) for order ${order.id}`);
 }
 
 /**
  * Notify the owner by email AND WhatsApp. The two are independent on purpose,
- * not a fallback chain: they fail for unrelated reasons (the bot bridge's
- * WhatsApp session logged itself out on 2026-07-24 and stayed dead for days
- * while email kept working), so each is attempted and each reports its own
+ * not a fallback chain: they fail for unrelated reasons (the WhatsApp bridge's
+ * session logged itself out on 2026-07-24 and stayed dead for days while email
+ * kept working), so each is attempted and each reports its own
  * outcome. A notification failure never fails the caller — the checkout and the
  * payment webhook must complete regardless, and panelShedMonitor.sh re-reads
  * orders.json every 3h as the backstop for anything lost here.
