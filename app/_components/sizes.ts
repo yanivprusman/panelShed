@@ -74,6 +74,36 @@ export const floorPriceFor = (s: ShedSizeSpec) =>
 export const SHIPPING_ILS = 450;
 
 /**
+ * Windows. Bought-in aluminium units cut into a finished panel — a fixed item,
+ * so a FIXED price, unlike the floor (₪/m²) and installation (footprint tiers).
+ *
+ * That is measured, not assumed: verified 2026-08-26 that panelil.co.il and
+ * hamechola.co.il quote the same three window prices on a 2x2 as on a 3x4. A
+ * window costs what a window costs; the shed around it does not change it.
+ *
+ * The numbers are the market's own, MATCHED rather than undercut. Both sellers
+ * list exactly these (panelil manufactures, hamechola resells at parity), and
+ * this is the wrong line to compete on: nobody chooses a shed vendor by window
+ * price, while fitting one is the most skilled work in the build — cutting a
+ * structural sandwich panel, framing the opening and sealing it. Discounting
+ * here gives away margin on labour in exchange for nothing. The catalogue shed
+ * already undercuts panelil on the base price, which is the number shoppers
+ * actually compare.
+ *
+ * Vents (פתח אוורור: ₪249 round 8.5", ₪249 square 30/15, ₪390 40/40) sit in the
+ * same dropdown at both competitors and are deliberately NOT offered here yet —
+ * they are a different product from a window, and the ask was a window.
+ */
+export const WINDOW_ILS = {
+  /** חלון אלומיניום 40/40 — רפרפה (louvred), זכוכית ורשת. */
+  alu40: 950,
+  /** חלון אלומיניום 80/80 — הזזה (sliding), זכוכית ורשת. */
+  alu80: 1150,
+  /** חלון אלומיניום 80/100 — הזזה, זכוכית ורשת. */
+  alu80x100: 1299,
+} as const;
+
+/**
  * הובלה והרכבה scales with footprint. Every tier here is a price we actually
  * verified 7/2026 against panelil.co.il (hamechola matches at the ₪2,350 tier):
  * ₪2,350 up to 9m² (3x2 … 3x3/4x2), ₪2,840 at 12m² (3x4), ₪3,150 at 20m² (5x4).

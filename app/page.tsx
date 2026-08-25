@@ -8,7 +8,7 @@ import SiteHeader from "./_components/site-header";
 import SiteFooter from "./_components/site-footer";
 import { SizeProvider } from "./_components/size-context";
 import { SITE_URL, SITE_NAME } from "@/lib/site";
-import { SIZES, SHIPPING_ILS } from "./_components/sizes";
+import { SIZES, SHIPPING_ILS, WINDOW_ILS } from "./_components/sizes";
 import { getPricedSizes } from "@/lib/cad-quote";
 import { BRAND, PHONE_DISPLAY, EMAIL } from "./_components/contact";
 import FaqSection, { FAQ_ITEMS } from "./_components/faq";
@@ -80,10 +80,24 @@ const buildJsonLd = (lowestPrice: number) => ({
 
 // ── Content (ported from the imported design's renderVals) ─────────────────
 const product = {
-  // LOCKED: exactly two configurator options — delivery (הובלה/הרכבה) and
-  // floor (ריצפה). Do NOT re-add "תוספת שדרוג דלת" (door) or "חלונות ופתחי
-  // אוורור" (windows/vents) — the user removed them and they regressed; see
-  // AGENTS.md.
+  // Three configurator options: delivery (הובלה/הרכבה), floor (ריצפה) and a
+  // window (חלון).
+  //
+  // The door upgrade ("תוספת שדרוג דלת") stays OUT. It and a windows dropdown
+  // were both removed on 2026-06-20 (199812f, "trim configurator to delivery +
+  // floor with real priced options") — and the reason is in that title: they
+  // were EMPTY placeholders, a <select> whose only entry was "בחר". What was
+  // removed was a control that priced nothing, not the idea of selling a window.
+  //
+  // The window returns on 2026-08-26 at the user's request, with real prices
+  // behind it this time (see sizes.ts::WINDOW_ILS — competitor-verified, and
+  // flat, because a window costs the same on a 2x2 as on a 3x4). Do not re-add
+  // the door the same way: bring a verified price or leave it out.
+  //
+  // NOTE the window is NOT in the 3D planner — CAD's geometry engine has no
+  // opening of any kind, so the shed in the frame beside the price has blank
+  // walls no matter which window is chosen. Selling it as a line item is honest;
+  // drawing it would need CAD to model an opening first.
   //
   // Shipping is priced separately from installation (user decision 2026-07-11,
   // competitor-verified against panelil.co.il): flat ₪450 shipping-only, and
@@ -112,6 +126,20 @@ const product = {
         // Floor price scales with the footprint (hamechola parity) — resolved
         // from the selected size's floorPrice in BuyPanel, not a flat number.
         { id: "pine-deck", label: "במת דק מעץ אורן מלא", price: null, priceFromSize: "floor" as const },
+      ],
+    },
+    {
+      // Flat prices, so no priceFromSize: a window is one bought-in unit fitted
+      // into a cut, and both competitors charge the same for it on every shed
+      // size. The choice labels name the glazing the way they do, because that
+      // is what the buyer is comparing across tabs.
+      id: "window",
+      label: "חלון",
+      choices: [
+        { id: "none", label: "ללא", price: null },
+        { id: "alu-40", label: "חלון אלומיניום 40/40 (רפרפה, זכוכית ורשת)", price: WINDOW_ILS.alu40 },
+        { id: "alu-80", label: "חלון אלומיניום 80/80 (הזזה, זכוכית ורשת)", price: WINDOW_ILS.alu80 },
+        { id: "alu-80-100", label: "חלון אלומיניום 80/100 (הזזה, זכוכית ורשת)", price: WINDOW_ILS.alu80x100 },
       ],
     },
   ],
