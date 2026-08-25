@@ -342,24 +342,29 @@ export default function BuyPanel({
     // configured or the gateway errors, surface a clear message.
     setLoading(true);
     try {
-      // A custom size carries its exact dimensions onto the order, so the build
-      // is made to what the customer designed in the planner rather than to a
-      // rounded label.
-      const orderOptions = [
-        {
-          label: "גודל",
-          choice: size.custom
-            ? `${size.label} מטר (מידה מותאמת מהמתכנן: ${size.widthCm}×${size.depthCm}×${heightOf(size)} ס"מ)`
-            : `${size.label} מטר`,
-          price: base,
-        },
-        ...chosen.flatMap((c) => {
-          const { price, available } = resolve(c);
-          return available && price != null
-            ? [{ label: "תוספת", choice: c.label, price }]
-            : [];
-        }),
-      ];
+      // WHICH SHED, and which add-ons — not what they cost. The server prices
+      // this itself from CAD's bill of materials and OPTION_GROUPS; a total sent
+      // from here would be a number the buyer's own browser chose, which is
+      // exactly what /api/checkout used to charge.
+      //
+      // A designed shed travels as its code — the whole shed, its dimensions
+      // included. Only a legacy /?width=&length= visitor has no code, and then
+      // the footprint is the only thing there is to name.
+      const shed = size.custom
+        ? designCode
+          ? { kind: "design" as const, designCode }
+          : {
+              kind: "footprint" as const,
+              widthCm: size.widthCm,
+              depthCm: size.depthCm,
+              heightCm: heightOf(size),
+            }
+        : { kind: "catalogue" as const, sizeLabel: size.label };
+
+      const choices = Object.fromEntries(
+        options.map((g, i) => [g.id, chosen[i]?.id ?? g.choices[0].id]),
+      );
+
       const res = await fetch("/api/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -370,19 +375,21 @@ export default function BuyPanel({
           emailToken: emailToken ?? "",
           emailCode: emailCode.trim(),
           notes: notes.trim(),
-          title,
-          totalIls: newTotal,
-          options: orderOptions,
-          // Which shed this is. The total above was computed from this design's
-          // bill of materials, so an order that keeps the price and drops the
-          // code records what was paid and not what was bought.
-          designCode: designCode ?? undefined,
+          shed,
+          choices,
+          // What this page is showing. The server compares rather than charges
+          // it, and refuses the checkout if the two disagree — so a stale tab
+          // sends the buyer back to a correct number instead of to a payment
+          // page for a price that is no longer real.
+          claimedTotalIls: newTotal,
         }),
       });
       const data = (await res.json()) as {
         ok?: boolean;
         redirectUrl?: string;
         error?: string;
+        /** Hebrew, already written for the buyer (stale price, retired size…). */
+        message?: string;
       };
       if (data.ok && data.redirectUrl) {
         window.location.href = data.redirectUrl; // off to Grow
@@ -394,7 +401,13 @@ export default function BuyPanel({
           ? "התשלום אינו זמין כרגע. נסו שוב מאוחר יותר או פנו אלינו בוואטסאפ."
           : data.error === "email_not_verified"
             ? "קוד האימות שגוי או פג תוקף. בקשו קוד חדש, או מחקו את שדה האימייל והמשיכו בלעדיו."
-            : "אירעה שגיאה בתהליך התשלום. נסו שוב או פנו אלינו בוואטסאפ.",
+            : // The pricing failures (stale price, retired size, an add-on that
+              // can't be priced at this footprint) each arrive with a sentence
+              // written for the buyer. Say it — a generic "something went wrong"
+              // on a ₪9,000 purchase reads as a broken shop rather than as a
+              // number to re-check.
+              (data.message ??
+                "אירעה שגיאה בתהליך התשלום. נסו שוב או פנו אלינו בוואטסאפ."),
       );
     } catch {
       setLoading(false);

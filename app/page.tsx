@@ -8,7 +8,8 @@ import SiteHeader from "./_components/site-header";
 import SiteFooter from "./_components/site-footer";
 import { SizeProvider } from "./_components/size-context";
 import { SITE_URL, SITE_NAME } from "@/lib/site";
-import { SIZES, SHIPPING_ILS, WINDOW_ILS } from "./_components/sizes";
+import { SIZES } from "./_components/sizes";
+import { OPTION_GROUPS } from "./_components/options";
 import { getPricedSizes } from "@/lib/cad-quote";
 import { BRAND, PHONE_DISPLAY, EMAIL } from "./_components/contact";
 import FaqSection, { FAQ_ITEMS } from "./_components/faq";
@@ -80,69 +81,6 @@ const buildJsonLd = (lowestPrice: number) => ({
 
 // ── Content (ported from the imported design's renderVals) ─────────────────
 const product = {
-  // Three configurator options: delivery (הובלה/הרכבה), floor (ריצפה) and a
-  // window (חלון).
-  //
-  // The door upgrade ("תוספת שדרוג דלת") stays OUT. It and a windows dropdown
-  // were both removed on 2026-06-20 (199812f, "trim configurator to delivery +
-  // floor with real priced options") — and the reason is in that title: they
-  // were EMPTY placeholders, a <select> whose only entry was "בחר". What was
-  // removed was a control that priced nothing, not the idea of selling a window.
-  //
-  // The window returns on 2026-08-26 at the user's request, with real prices
-  // behind it this time (see sizes.ts::WINDOW_ILS — competitor-verified, and
-  // flat, because a window costs the same on a 2x2 as on a 3x4). Do not re-add
-  // the door the same way: bring a verified price or leave it out.
-  //
-  // NOTE the window is NOT in the 3D planner — CAD's geometry engine has no
-  // opening of any kind, so the shed in the frame beside the price has blank
-  // walls no matter which window is chosen. Selling it as a line item is honest;
-  // drawing it would need CAD to model an opening first.
-  //
-  // Shipping is priced separately from installation (user decision 2026-07-11,
-  // competitor-verified against panelil.co.il): flat ₪450 shipping-only, and
-  // הובלה+הרכבה derived from footprint (₪2,350; 3x4 → ₪2,840) via
-  // deliveryInstallPriceFor. Installation is never sold without shipping —
-  // no competitor offers it and neither do we.
-  //
-  // The `id`s are the stable names the planner round trip restores selections
-  // by (see _components/planner.ts) — they travel in URLs, so renaming one
-  // breaks a customer who is mid-trip. Change a label freely; leave ids alone.
-  options: [
-    {
-      id: "delivery",
-      label: "הובלה והרכבה:",
-      choices: [
-        { id: "none", label: "ללא (איסוף עצמי)", price: null },
-        { id: "shipping", label: "הובלה בלבד", price: SHIPPING_ILS },
-        { id: "shipping-install", label: "הובלה והרכבה", price: null, priceFromSize: "deliveryInstall" as const },
-      ],
-    },
-    {
-      id: "floor",
-      label: "ריצפה",
-      choices: [
-        { id: "none", label: "ללא", price: null },
-        // Floor price scales with the footprint (hamechola parity) — resolved
-        // from the selected size's floorPrice in BuyPanel, not a flat number.
-        { id: "pine-deck", label: "במת דק מעץ אורן מלא", price: null, priceFromSize: "floor" as const },
-      ],
-    },
-    {
-      // Flat prices, so no priceFromSize: a window is one bought-in unit fitted
-      // into a cut, and both competitors charge the same for it on every shed
-      // size. The choice labels name the glazing the way they do, because that
-      // is what the buyer is comparing across tabs.
-      id: "window",
-      label: "חלון",
-      choices: [
-        { id: "none", label: "ללא", price: null },
-        { id: "alu-40", label: "חלון אלומיניום 40/40 (רפרפה, זכוכית ורשת)", price: WINDOW_ILS.alu40 },
-        { id: "alu-80", label: "חלון אלומיניום 80/80 (הזזה, זכוכית ורשת)", price: WINDOW_ILS.alu80 },
-        { id: "alu-80-100", label: "חלון אלומיניום 80/100 (הזזה, זכוכית ורשת)", price: WINDOW_ILS.alu80x100 },
-      ],
-    },
-  ],
   buyLabel: "קנה עכשיו",
   delivery: "זמן אספקה: 21 ימי עסקים , קיימת אפשרות לאיסוף עצמי",
   trustTitle: "למה לקוחות קונים אצלנו:",
@@ -186,7 +124,7 @@ export default async function Home() {
           WhatsApp buttons up there and down there now offer to send the shed
           currently on screen, which is a fact only SizeProvider holds. Neither
           provider renders an element, so nothing about the layout moves. */}
-      <SizeProvider sizes={sizes} options={product.options}>
+      <SizeProvider sizes={sizes} options={OPTION_GROUPS}>
       <WhatsAppChooserProvider>
       <div data-id="page-container" style={{ maxWidth: 1180, margin: "0 auto" }}>
         <SiteHeader />

@@ -2,7 +2,8 @@
 
 import { useCallback, useMemo } from "react";
 import { useSize } from "./size-context";
-import { productTitle, floorPriceFor, deliveryInstallPriceFor } from "./sizes";
+import { productTitle } from "./sizes";
+import { resolveChoicePrice } from "./options";
 import { sizeSummary, type OptionChoice as Choice } from "./planner";
 
 /**
@@ -27,26 +28,11 @@ export function useConfiguredOrder() {
   const base = size.price;
   const title = productTitle(size.label);
 
-  // Some add-ons (pine-deck floor, delivery+install) are priced by footprint,
-  // not flat — their choice carries priceFromSize and the real price is derived
-  // from the selected size.
-  //
-  // `available` is NOT the same as "price is null": "ללא (איסוף עצמי)" is free
-  // (null price, available), while הובלה+הרכבה above the top competitor-verified
-  // tier has no price we can stand behind and is genuinely unavailable. Keeping
-  // them apart is what stops an unpriceable add-on from being sold for ₪0. Floor
-  // is a ₪/m² formula, so it holds for any footprint.
+  // The SAME function the checkout route prices with (see ./options.ts). Not a
+  // copy of it: a card that computes its own price and a server that computes
+  // another is exactly the drift this whole arrangement exists to prevent.
   const resolve = useCallback(
-    (c: Choice): { price: number | null; available: boolean } => {
-      if (c.priceFromSize === "floor") {
-        return { price: floorPriceFor(size), available: true };
-      }
-      if (c.priceFromSize === "deliveryInstall") {
-        const p = deliveryInstallPriceFor(size);
-        return { price: p, available: p !== null };
-      }
-      return { price: c.price, available: true };
-    },
+    (c: Choice) => resolveChoicePrice(c, size),
     [size],
   );
 
