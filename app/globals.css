@@ -158,6 +158,49 @@ textarea:focus-visible,
   box-shadow: 0 8px 24px rgba(37, 211, 102, 0.55);
 }
 
+/* Rows of the WhatsApp message chooser (_components/whatsapp-chooser.tsx).
+   A row is a link, not a form control: one tap and WhatsApp is open with the
+   message already written. The first row — the shed on screen — is the only
+   one tinted, so the eye lands on the answer that carries the most. */
+.wa-choice {
+  display: block;
+  padding: 13px 15px;
+  margin-bottom: 9px;
+  border: 1px solid #e2e6e8;
+  border-radius: 10px;
+  background: #fff;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background 140ms ease, border-color 140ms ease, transform 140ms ease;
+}
+
+.wa-choice:hover,
+.wa-choice:focus-visible {
+  background: #f4faf6;
+  border-color: #25d366;
+  transform: translateY(-1px);
+}
+
+.wa-choice-primary {
+  background: #f2fbf5;
+  border-color: #bfe6cd;
+}
+
+.wa-choice-label {
+  display: block;
+  font-size: 15.5px;
+  font-weight: 700;
+  color: #2f2f2f;
+  margin-bottom: 3px;
+}
+
+.wa-choice-sub {
+  display: block;
+  font-size: 13px;
+  line-height: 1.5;
+  color: #7a7a7a;
+}
+
 /* "העתיקו קישור לתצורה הזו" — a quiet third button under the two CTAs: this is
    how you hand an order to someone else, not how you place one. */
 .share-btn {

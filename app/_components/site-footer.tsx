@@ -1,12 +1,12 @@
 import Link from "next/link";
 import {
-  GENERIC_WHATSAPP_URL,
   TEL_URL,
   PHONE_DISPLAY,
   LEGAL_NAME,
   BUSINESS_ID,
 } from "./contact";
-import { WhatsAppIcon, PhoneIcon } from "./icons";
+import { PhoneIcon } from "./icons";
+import { FooterWhatsApp } from "./whatsapp-cta";
 
 const legalLink: React.CSSProperties = {
   color: "#7a7a7a",
@@ -65,24 +65,7 @@ export default function SiteFooter() {
           {LEGAL_NAME} · ע.מ <span dir="ltr">{BUSINESS_ID}</span>
         </span>
       </span>
-      <a
-        data-id="footer-whatsapp"
-        href={GENERIC_WHATSAPP_URL}
-        target="_blank"
-        rel="noopener noreferrer"
-        style={{
-          display: "inline-flex",
-          alignItems: "center",
-          gap: 7,
-          color: "#3a3a3a",
-          fontWeight: 600,
-          fontSize: 14,
-          textDecoration: "none",
-        }}
-      >
-        <WhatsAppIcon size={20} />
-        וואטסאפ
-      </a>
+      <FooterWhatsApp />
       <a
         data-id="footer-phone"
         href={TEL_URL}

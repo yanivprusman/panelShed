@@ -1,27 +1,20 @@
 "use client";
 
 import {
-  useCallback,
-  useMemo,
   useState,
   type CSSProperties,
   type FormEvent,
   type ReactNode,
 } from "react";
 import { useSize } from "./size-context";
-import {
-  productTitle,
-  floorPriceFor,
-  deliveryInstallPriceFor,
-  heightOf,
-} from "./sizes";
-import { sizeSummary, type OptionChoice as Choice } from "./planner";
+import { heightOf } from "./sizes";
+import { sizeSummary } from "./planner";
+import { useConfiguredOrder, ils } from "./configured-order";
 import { DesignDetails } from "./design-details";
 import { whatsappUrl } from "./contact";
 import { WhatsAppIcon, CheckIcon, LinkIcon } from "./icons";
 import { reportLead } from "@/lib/gtag";
 
-const ils = (n: number) => `₪ ${n.toLocaleString("he-IL")}`;
 const ACCENT = "#2f8fd6";
 
 /** Mirror of the server-side Israeli-mobile check so we fail fast before POSTing. */
@@ -179,14 +172,16 @@ export default function BuyPanel({
     size,
     customStatus,
     options,
-    sel,
     setChoice,
     plannerUrl,
     shareUrl,
     designCode,
   } = useSize();
-  const base = size.price;
-  const title = productTitle(size.label);
+  // Price, effective selection and the order in words — shared with the
+  // WhatsApp chooser so a message can never quote a total this card is not
+  // showing. See ./configured-order.ts.
+  const { base, title, resolve, effSel, chosen, total: newTotal, configMessage } =
+    useConfiguredOrder();
 
   const [open, setOpen] = useState(false);
   /**
@@ -259,95 +254,7 @@ export default function BuyPanel({
     }
   }
 
-  // Some add-ons (pine-deck floor, delivery+install) are priced by footprint,
-  // not flat — their choice carries priceFromSize and the real price is derived
-  // from the selected size.
-  //
-  // `available` is NOT the same as "price is null": "ללא (איסוף עצמי)" is free
-  // (null price, available), while הובלה+הרכבה above the top competitor-verified
-  // tier has no price we can stand behind and is genuinely unavailable. Keeping
-  // them apart is what stops an unpriceable add-on from being sold for ₪0. Floor
-  // is a ₪/m² formula, so it holds for any footprint.
-  const resolve = useCallback(
-    (c: Choice): { price: number | null; available: boolean } => {
-      if (c.priceFromSize === "floor") {
-        return { price: floorPriceFor(size), available: true };
-      }
-      if (c.priceFromSize === "deliveryInstall") {
-        const p = deliveryInstallPriceFor(size);
-        return { price: p, available: p !== null };
-      }
-      return { price: c.price, available: true };
-    },
-    [size],
-  );
-
-  // A size change could in principle pull the floor out from under the current
-  // selection, so the effective choice is DERIVED rather than synced: an
-  // unavailable selection reads as that group's first choice — always the "ללא"
-  // one. Derived, so there is no window in which the displayed selection and the
-  // priced one disagree.
-  //
-  // Today nothing can actually be unavailable: CUSTOM_LIMITS.maxSqm is derived
-  // from the top install tier, so the storefront only ever offers a footprint it
-  // can price end to end. This guard is kept deliberately — it is what stops a
-  // ₪0 add-on from being sold if that ceiling is ever raised past the verified
-  // tiers.
-  const effSel = useMemo(
-    () => options.map((g, i) => {
-      const idx = sel[i] ?? 0;
-      const c = g.choices[idx];
-      return c && resolve(c).available ? idx : 0;
-    }),
-    [options, sel, resolve],
-  );
-
-  const chosen = useMemo(
-    () => options.map((g, i) => g.choices[effSel[i]] ?? g.choices[0]),
-    [options, effSel],
-  );
-  const addons = chosen.reduce((s, c) => {
-    const { price, available } = resolve(c);
-    return s + (available ? (price ?? 0) : 0);
-  }, 0);
-  const newTotal = base + addons;
-
-  /**
-   * The configuration in words — every line of it, the free choices included.
-   *
-   * "ריצפה: ללא" is as much of the order as "במת דק — ₪7,000": a shed quoted
-   * without a floor and a shed nobody remembered to ask about a floor for read
-   * identically once the word is missing, and that ambiguity is settled on the
-   * phone, badly, days later. A priced choice speaks for itself and needs no
-   * group name in front of it; a free one is only intelligible with it.
-   */
-  const configLines = useMemo(() => {
-    const lines = [`${sizeSummary(size)} — ${ils(base)}`];
-    chosen.forEach((c, i) => {
-      const { price, available } = resolve(c);
-      if (!available) return;
-      const group = (options[i]?.label ?? "").replace(/\s*:\s*$/, "");
-      lines.push(price != null ? `${c.label} — ${ils(price)}` : `${group}: ${c.label}`);
-    });
-    lines.push(`סה"כ ${ils(newTotal)} כולל מע"מ`);
-    return lines;
-  }, [size, base, chosen, options, resolve, newTotal]);
-
-  /**
-   * The WhatsApp message: the whole order, then the link that reproduces it.
-   *
-   * The text is for the person reading the chat; the link is for the shop,
-   * which reopens on this exact shed with these exact add-ons and a working
-   * pay button. Sending only the product title — which is all this said before
-   * — threw away every choice the sender had just made and started the
-   * conversation from "which shed did you mean?".
-   */
-  const configMessage = useMemo(
-    () => ["שלום, אשמח לקבל פרטים על " + title, ...configLines, "", shareUrl].join("\n"),
-    [title, configLines, shareUrl],
-  );
-
-  const askWhatsappUrl = whatsappUrl(configMessage);
+  const askWhatsappUrl = whatsappUrl(configMessage, { link: shareUrl });
 
   /**
    * Copy the link, and say which of the two things happened. The clipboard is
@@ -604,7 +511,9 @@ export default function BuyPanel({
           {customStatus.message}{" "}
           <a
             data-id="custom-size-error-whatsapp"
-            href={whatsappUrl("שלום, תכננתי מחסן במתכנן ואשמח לקבל הצעת מחיר למידות שלי.")}
+            href={whatsappUrl("שלום, תכננתי מחסן במתכנן ואשמח לקבל הצעת מחיר למידות שלי.", {
+              link: shareUrl,
+            })}
             target="_blank"
             rel="noopener noreferrer"
             style={{ color: ACCENT, fontWeight: 700 }}
@@ -626,6 +535,7 @@ export default function BuyPanel({
             data-id="custom-size-warning-whatsapp"
             href={whatsappUrl(
               `שלום, תכננתי מחסן במידות ${size.widthCm}×${size.depthCm} ס"מ, גובה ${heightOf(size)} ס"מ, ואשמח לוודא שאפשר לייצר אותו.`,
+              { link: shareUrl },
             )}
             target="_blank"
             rel="noopener noreferrer"

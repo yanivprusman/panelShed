@@ -13,6 +13,7 @@ import { getPricedSizes } from "@/lib/cad-quote";
 import { BRAND, PHONE_DISPLAY, EMAIL } from "./_components/contact";
 import FaqSection, { FAQ_ITEMS } from "./_components/faq";
 import { FloatingWhatsApp } from "./_components/whatsapp-cta";
+import { WhatsAppChooserProvider } from "./_components/whatsapp-chooser";
 
 const galleryImages = [
   "/products/real-installation.jpg",
@@ -153,10 +154,15 @@ export default async function Home() {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
+      {/* Both providers wrap the WHOLE page, header and footer included: the
+          WhatsApp buttons up there and down there now offer to send the shed
+          currently on screen, which is a fact only SizeProvider holds. Neither
+          provider renders an element, so nothing about the layout moves. */}
+      <SizeProvider sizes={sizes} options={product.options}>
+      <WhatsAppChooserProvider>
       <div data-id="page-container" style={{ maxWidth: 1180, margin: "0 auto" }}>
         <SiteHeader />
 
-        <SizeProvider sizes={sizes} options={product.options}>
           <main id="main-content" tabIndex={-1} style={{ outline: "none" }}>
           {/* ===== TOP: GALLERY + PURCHASE CARD ===== */}
           <div
@@ -232,12 +238,13 @@ export default async function Home() {
           {/* ===== FAQ ===== */}
           <FaqSection />
           </main>
-        </SizeProvider>
 
         <SiteFooter />
       </div>
 
       <FloatingWhatsApp />
+      </WhatsAppChooserProvider>
+      </SizeProvider>
     </div>
   );
 }
