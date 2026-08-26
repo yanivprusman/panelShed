@@ -287,8 +287,10 @@ export default function BuyPanel({
     setMode(next === "custom" ? "custom" : "standard");
   }
 
-  // Split across the button's two lines: what it is, then what it costs.
-  const customTitle = custom ? "המידה שלכם" : "מידה מותאמת אישית";
+  // Split across the button's two lines: what it is, then what it costs. The
+  // title stays "מידה מותאמת אישית" whether or not a design exists yet — it names the
+  // option, and the line under it is what changes once one does.
+  const customTitle = "מידה מותאמת אישית";
   const customDetail = custom
     ? `${sizeSummary(custom)} — ${ils(custom.price)}`
     : customStatus.state === "loading"
