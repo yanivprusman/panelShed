@@ -61,7 +61,7 @@ export async function GET(): Promise<Response> {
   <channel>
     <title>${esc(SITE_NAME)}</title>
     <link>${SITE_URL}</link>
-    <description>מחסני גינה מפאנל מבודד — מגוון גדלים, מיוצר בישראל</description>
+    <description>מחסן גינה מפאנל מבודד 2x2 מטר בגובה 2.2 — המידה הסטנדרטית, מיוצר בישראל</description>
 ${items}
   </channel>
 </rss>
