@@ -29,6 +29,43 @@ type QuoteResponse = {
   error?: string;
 };
 
+const PANEL_SUPPLIES = ["shop", "factory"] as const;
+type PanelSupply = (typeof PANEL_SUPPLIES)[number];
+
+/**
+ * Where the panels behind every price on this site are bought — off a
+ * merchant's shelf (`shop`, the default) or rolled to order by a plant
+ * (`factory`). CAD prices the same shed either way; what changes is the length
+ * of stock each panel is paid for, and a plant charges only for the panel's own
+ * length. On a sloped wall that is money: off a shelf every panel is bought at
+ * the tallest one's standard length, when each is a little shorter than the one
+ * before.
+ *
+ * ONE setting for the whole shop, applied to the customer's price and to our
+ * own cost sheet alike. Splitting them is how a storefront ends up quoting a
+ * factory price while paying shop prices, or reporting a profit it isn't
+ * making.
+ *
+ * Unset means `shop` — the way this site has always priced. A value that is
+ * neither throws rather than being read as one of them: which basket of lengths
+ * a real price came from is not something to guess at.
+ */
+function panelSupply(): PanelSupply {
+  const raw = process.env.PANEL_SUPPLY;
+  if (raw === undefined || raw === "") return "shop";
+  if (!(PANEL_SUPPLIES as readonly string[]).includes(raw)) {
+    throw new Error(
+      `PANEL_SUPPLY is "${raw}" — expected ${PANEL_SUPPLIES.join(" or ")}, or unset for shop`,
+    );
+  }
+  return raw as PanelSupply;
+}
+
+/** The supply choice as a query fragment, ready to append to a CAD quote URL. */
+function supplyQuery(): string {
+  return `&supply=${panelSupply()}`;
+}
+
 function quoteBaseUrl(): string {
   const base = process.env.CAD_QUOTE_BASE_URL;
   if (!base) {
@@ -55,7 +92,7 @@ export async function quoteMaterialsPrice(
 ): Promise<number> {
   const url =
     `${quoteBaseUrl()}/api/quote?code=panel-shed` +
-    `&width=${widthCm}&length=${depthCm}&height=${heightCm}`;
+    `&width=${widthCm}&length=${depthCm}&height=${heightCm}${supplyQuery()}`;
   const res = await fetch(url, { next: { revalidate: 3600 } });
   if (!res.ok) {
     throw new Error(`CAD quote failed (${res.status}) for ${widthCm}x${depthCm}`);
@@ -85,7 +122,9 @@ export async function quoteMaterialsPrice(
  * carries a string CAD minted and hands it back.
  */
 export async function quoteDesignPrice(designCode: string): Promise<number> {
-  const url = `${quoteBaseUrl()}/api/quote?code=panel-shed&design=${encodeURIComponent(designCode)}`;
+  const url =
+    `${quoteBaseUrl()}/api/quote?code=panel-shed&design=${encodeURIComponent(designCode)}` +
+    supplyQuery();
   const res = await fetch(url, { next: { revalidate: 3600 } });
   if (!res.ok) {
     throw new Error(`CAD quote failed (${res.status}) for design ${designCode}`);
@@ -165,7 +204,9 @@ export async function quoteDesignProfit(designCode: string): Promise<DesignProfi
       "CAD_DISTRIBUTOR_TOKEN is not set — the admin profit view needs the panel-shed distributor's CAD token",
     );
   }
-  const url = `${quoteBaseUrl()}/api/quote?code=panel-shed&design=${encodeURIComponent(designCode)}`;
+  const url =
+    `${quoteBaseUrl()}/api/quote?code=panel-shed&design=${encodeURIComponent(designCode)}` +
+    supplyQuery();
   const res = await fetch(url, {
     headers: { Authorization: `Bearer ${token}` },
     cache: "no-store",

@@ -54,6 +54,27 @@ The Make webhook module payload contract: `orderId, amount, description, custome
 customerPhone, customerEmail, successUrl, notifyUrl` (orderId also lands in Grow's Custom
 Field 1 for console-side reconciliation; installments capped at 3).
 
+# Where the panels are bought (`PANEL_SUPPLY`)
+
+Every price on this site is a CAD bill of materials, and CAD can cost the same
+shed two ways depending on where its panels come from:
+
+- **`shop`** (unset = this, and how the site has always priced) -- a merchant
+  selling off the shelf. Each panel is bought at the next standard length up and
+  the offcut is paid for.
+- **`factory`** -- the plant itself, which rolls each panel at its own length.
+  Rectangles only, at a fixed 1 m width, so nothing about the shed changes; what
+  changes is the metres on the invoice. It bites hardest on a sloped wall, where
+  each panel needs 2 cm less than the one before and a shelf sells every one of
+  them at the tallest one's length. Measured 2026-09-04 on a 2x3: ₪4,710 → ₪4,670.
+
+`PANEL_SUPPLY` in `.env.local` sets it, and `lib/cad-quote.ts` appends it to
+EVERY call it makes -- the customer's price, the merchant feed and the admin
+cost/profit sheet alike. **One setting for the whole shop, deliberately**:
+splitting them is how a storefront quotes a factory price while paying shop
+prices, or reports a profit it isn't making. A value that is neither throws
+rather than being read as one of them.
+
 # Google Ads conversion tracking
 
 `lib/gtag.ts` + `app/_components/google-ads-tag.tsx` wire Google Ads conversions. The global tag
