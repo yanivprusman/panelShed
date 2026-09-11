@@ -104,6 +104,42 @@ export const WINDOW_ILS = {
 } as const;
 
 /**
+ * דלת סטנלי — a bought-in decorative steel exterior door, fitted in place of
+ * the panel leaf every shed otherwise ships with.
+ *
+ * FIXED, like the window and for the same reason: it is one bought-in unit
+ * fitted into one opening, and the shed around it does not change what it
+ * costs. Verified 2026-09-11 against three sellers' live pages:
+ *
+ *   toprosol.co.il   ₪1,300 ("תוספת דלת סטנלי") + ₪200 ("התקנת חלון/דלת"),
+ *                    listed as two separate line items = ₪1,500 fitted
+ *   gratedoor.co.il  ₪1,500 ("דלת סטנלי — דלת אטומה דקורטיבית עם צילינדר")
+ *   idgarden.net     ₪1,190 "החל מ" for the door SUPPLIED ONLY — carriage paid
+ *                    to the driver, no fitting offered
+ *
+ * Two sellers land on ₪1,500 fitted by different routes, and the third's
+ * supply-only ₪1,190 is what the leaf alone costs. We sell sheds fitted, so the
+ * fitted number is ours: ₪1,500, MATCHED not undercut, the same judgement as
+ * WINDOW_ILS above — cutting a structural sandwich panel and hanging a steel
+ * door in it is the skilled work, nobody picks a shed vendor on door price, and
+ * discounting here gives away margin on labour for nothing.
+ *
+ * Note panelil.co.il — the manufacturer we benchmark base prices against — does
+ * NOT offer one: its sheds ship with the panel door only. This is a reseller
+ * add-on, which is why its price is checked against resellers.
+ *
+ * DELIBERATELY NOT NETTED against the standard door's hardware (Door Hinges ₪60
+ * + Door Handle ₪150 in CAD's bill of materials, which a Stanley door's own
+ * frame, handle and cylinder replace). Every seller above quotes it as a flat
+ * addition on top of the shed, and the window directly above is sold the same
+ * way over a CAD quote that still charges the full uncut wall panel. Netting
+ * one add-on and not the other would make the two prices mean different things.
+ * If this becomes a margin question, the fix is CAD swapping the BOM line — not
+ * a discount invented here.
+ */
+export const STANLEY_DOOR_ILS = 1500;
+
+/**
  * הובלה והרכבה scales with footprint. Every tier here is a price we actually
  * verified 7/2026 against panelil.co.il (hamechola matches at the ₪2,350 tier):
  * ₪2,350 up to 9m² (3x2 … 3x3/4x2), ₪2,840 at 12m² (3x4), ₪3,150 at 20m² (5x4).

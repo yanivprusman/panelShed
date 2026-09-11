@@ -1,5 +1,6 @@
 import {
   SHIPPING_ILS,
+  STANLEY_DOOR_ILS,
   WINDOW_ILS,
   floorPriceFor,
   deliveryInstallPriceFor,
@@ -23,18 +24,19 @@ import type { OptionChoice, OptionGroup } from "./planner";
  * global): app/api/checkout imports it, and that import is the whole point.
  */
 
-// LOCKED: three configurator options — delivery (הובלה/הרכבה), floor (ריצפה)
-// and a window (חלון).
+// LOCKED: four configurator options — delivery (הובלה/הרכבה), floor (ריצפה),
+// a window (חלון) and a Stanley door (דלת סטנלי).
 //
-// The door upgrade ("תוספת שדרוג דלת") stays OUT. It and a windows dropdown
-// were both removed on 2026-06-20 (199812f, "trim configurator to delivery +
-// floor with real priced options") — and the reason is in that title: they were
-// EMPTY placeholders, a <select> whose only entry was "בחר". What was removed
-// was a control that priced nothing, not the idea of selling a window.
+// The door and a windows dropdown were both removed on 2026-06-20 (199812f,
+// "trim configurator to delivery + floor with real priced options") — and the
+// reason is in that title: they were EMPTY placeholders, a <select> whose only
+// entry was "בחר". What was removed was a control that priced nothing, not the
+// idea of selling either one.
 //
-// The window returned on 2026-08-26 with real, competitor-verified prices (see
-// sizes.ts::WINDOW_ILS). Do not re-add the door the same way: bring a verified
-// price or leave it out.
+// Both are back, each only once it had a verified price: the window on
+// 2026-08-26 (sizes.ts::WINDOW_ILS) and the door on 2026-09-11
+// (sizes.ts::STANLEY_DOOR_ILS, three sellers' live pages). That is the bar for
+// anything added here — a price we checked, or no option.
 //
 // NOTE the window is NOT in the 3D planner — CAD's geometry engine has no
 // opening of any kind, so the shed in the frame beside the price has blank walls
@@ -53,9 +55,11 @@ import type { OptionChoice, OptionGroup } from "./planner";
 // and rejects a checkout from an open tab. Change a label freely; leave ids
 // alone.
 //
-// EVERY group's first choice must be the free "ללא" one — the configurator
-// defaults to index 0, and a paid default would charge for something nobody
-// picked.
+// EVERY group's first choice must be the FREE one — the configurator defaults
+// to index 0, and a paid default would charge for something nobody picked. The
+// rule is about the price, not the word: "ללא" fits a floor or a window, which
+// a shed can genuinely lack, while the door group's free choice is the standard
+// panel door the base price already includes, and says so.
 export const OPTION_GROUPS: OptionGroup[] = [
   {
     id: "delivery",
@@ -96,6 +100,26 @@ export const OPTION_GROUPS: OptionGroup[] = [
         id: "alu-80-100",
         label: "חלון אלומיניום 80/100 (הזזה, זכוכית ורשת)",
         price: WINDOW_ILS.alu80x100,
+      },
+    ],
+  },
+  {
+    // Flat, for the window's reason: one bought-in door fitted into one
+    // opening, the same price on a 2x2 as on a 5x4.
+    //
+    // "ללא" here is not an absence — every shed HAS a door. It is the panel
+    // leaf cut from the wall opening and framed in U-channel, which is what the
+    // base price already builds (CAD's bill of materials: Door Hinges, Door
+    // Handle, and the door frame inside the U-Channel line). The label says so,
+    // because "ללא" next to a door reads as a shed with a hole in it.
+    id: "door",
+    label: "דלת",
+    choices: [
+      { id: "none", label: "דלת פאנל סטנדרטית (כלולה)", price: null },
+      {
+        id: "stanley",
+        label: "דלת סטנלי (פלדה, צילינדר ומפתח)",
+        price: STANLEY_DOOR_ILS,
       },
     ],
   },
