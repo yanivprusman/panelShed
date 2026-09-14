@@ -322,8 +322,8 @@ export default function BuyPanel({
       setError("נא למלא מספר טלפון נייד תקין (למשל 0501234567)");
       return;
     }
-    // Starting checkout = a strong lead signal for Google Ads (no-op unless
-    // NEXT_PUBLIC_GADS_LEAD_LABEL is set), weighted by the cart total. Fired on
+    // Starting checkout = a strong lead signal for Google Ads, weighted by the
+    // cart total. Fired on
     // name+phone so we still capture the lead even if the email step stops here.
     reportLead({ value: newTotal });
 
@@ -532,6 +532,7 @@ export default function BuyPanel({
             target="_blank"
             rel="noopener noreferrer"
             style={{ color: ACCENT, fontWeight: 700 }}
+            onClick={() => reportLead({ value: newTotal })}
           >
             דברו איתנו בוואטסאפ
           </a>
@@ -555,6 +556,7 @@ export default function BuyPanel({
             target="_blank"
             rel="noopener noreferrer"
             style={{ color: "#8a6100", fontWeight: 700, textDecoration: "none" }}
+            onClick={() => reportLead({ value: newTotal })}
           >
             דברו איתנו ונוודא שהכול מתאים ›
           </a>
