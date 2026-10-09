@@ -4,10 +4,16 @@ import { useEffect, useState, type CSSProperties, type FormEvent } from "react";
 import { useConfiguredOrder, ils } from "./configured-order";
 
 /**
- * "הפקת הצעת מחיר" — the owner's button, invisible to everyone else.
+ * "הפקת הצעת מחיר" — the owner's button, on the card where the order was just
+ * configured.
  *
- * Shown only when this browser is signed in as the owner (/owner, the
- * ADMIN_TOKEN password). One tap opens a form for the customer's details; the
+ * Visible to everyone, usable only with the password: the owner configures a
+ * shed WITH the customer and must be able to quote it on the spot, without a
+ * detour to a sign-in page in another tab. The first tap on a device asks for
+ * the ADMIN_TOKEN password inside the same dialog; the browser then stays
+ * signed in (half a year), so later taps go straight to the form. A customer who
+ * taps it meets a password field and nothing else — every quote is still priced
+ * and authorised by the server. One tap opens a form for the customer's details; the
  * server prices the configuration on screen, numbers and stores the quote, and
  * hands back a PDF. On a phone the PDF goes straight to the share sheet, so it
  * can be sent through whatever app the owner chooses; elsewhere it downloads.
@@ -39,7 +45,9 @@ type Result = { file: File; number: string };
 
 export default function OwnerQuote() {
   const { orderRef, total, title } = useConfiguredOrder();
-  const [owner, setOwner] = useState(false);
+  /** null = not known yet; the dialog waits for the answer before asking. */
+  const [owner, setOwner] = useState<boolean | null>(null);
+  const [password, setPassword] = useState("");
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
@@ -55,13 +63,35 @@ export default function OwnerQuote() {
     fetch("/api/owner/session", { cache: "no-store" })
       .then((r) => r.json())
       .then((d: { owner?: boolean }) => live && setOwner(!!d.owner))
-      .catch(() => {});
+      // Unknown means "ask": the server still decides on every quote.
+      .catch(() => live && setOwner(false));
     return () => {
       live = false;
     };
   }, []);
 
-  if (!owner) return null;
+  async function signIn(e: FormEvent) {
+    e.preventDefault();
+    setBusy(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/owner/session", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ password }),
+      });
+      if (res.ok) {
+        setOwner(true);
+        setPassword("");
+      } else {
+        setError(res.status === 401 ? "סיסמה שגויה" : `הכניסה נכשלה (${res.status})`);
+      }
+    } catch {
+      setError("אין חיבור לשרת");
+    } finally {
+      setBusy(false);
+    }
+  }
 
   function close() {
     setOpen(false);
@@ -90,10 +120,14 @@ export default function OwnerQuote() {
       });
       if (!res.ok) {
         const d = (await res.json().catch(() => ({}))) as { message?: string; error?: string };
-        setError(
-          d.message ??
-            (d.error === "not_owner" ? "פג החיבור — התחברו מחדש בדף /owner" : `הפקת ההצעה נכשלה (${d.error ?? res.status})`),
-        );
+        if (d.error === "not_owner") {
+          // Signed out since the dialog opened (password rotated, cookie
+          // cleared): ask again, keeping everything already typed.
+          setOwner(false);
+          setError("נדרשת סיסמה");
+          return;
+        }
+        setError(d.message ?? `הפקת ההצעה נכשלה (${d.error ?? res.status})`);
         return;
       }
       const number = res.headers.get("X-Quote-Number") ?? "";
@@ -140,9 +174,9 @@ export default function OwnerQuote() {
         data-id="owner-quote-open"
         className="share-btn"
         onClick={() => setOpen(true)}
-        style={{ ...btn, marginTop: 10, fontSize: 15, fontWeight: 600, padding: 12 }}
+        style={{ ...btn, border: "1px solid #d8dde0", marginTop: 10, fontSize: 15, fontWeight: 600, padding: 12 }}
       >
-        הפקת הצעת מחיר (PDF) · למנהל בלבד
+        הפקת הצעת מחיר (PDF)
       </button>
 
       {open && (
@@ -192,10 +226,38 @@ export default function OwnerQuote() {
               </button>
             </div>
             <p data-id="owner-quote-summary" style={{ margin: "6px 0 0", fontSize: 14, color: "#666" }}>
-              {title} — <strong style={{ color: "#2a2a2a" }}>{ils(total)}</strong> כולל מע&quot;מ
+              {title} — <strong style={{ color: "#2a2a2a" }}>{ils(total)}</strong>{" "}כולל מע&quot;מ
             </p>
 
-            {result ? (
+            {owner === null ? (
+              <p data-id="owner-quote-checking" style={{ margin: "18px 0 0", color: "#777" }}>רגע…</p>
+            ) : !owner ? (
+              <form data-id="owner-quote-sign-in" onSubmit={signIn}>
+                <label style={label} htmlFor="oq-password">סיסמת מנהל</label>
+                <input
+                  id="oq-password"
+                  data-id="owner-quote-password"
+                  type="password"
+                  autoComplete="current-password"
+                  autoFocus
+                  style={field}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                />
+                {error && (
+                  <p data-id="owner-quote-sign-in-error" style={{ margin: "12px 0 0", color: "#b3261e", fontSize: 14 }}>{error}</p>
+                )}
+                <button
+                  type="submit"
+                  data-id="owner-quote-sign-in-submit"
+                  className="buy-btn"
+                  disabled={busy || !password}
+                  style={{ ...btn, color: "#fff", marginTop: 16, opacity: busy || !password ? 0.5 : 1, cursor: busy || !password ? "not-allowed" : "pointer" }}
+                >
+                  המשך
+                </button>
+              </form>
+            ) : result ? (
               <div data-id="owner-quote-done" style={{ marginTop: 18 }}>
                 <p style={{ margin: "0 0 14px", fontSize: 15, fontWeight: 600, color: "#1e8e4a" }}>
                   הצעה מס&apos; {result.number} הופקה ✓

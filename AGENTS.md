@@ -193,11 +193,14 @@ there, so they cannot disagree.
 
 The owner can turn the configuration on screen into a numbered PDF quote.
 
-- **Sign in once per device at `/owner`** with the `ADMIN_TOKEN` password (the
-  same secret as `/admin/orders`). The browser keeps `ps_owner`, an HMAC of the
-  token (rotating the token signs every device out). Only then does the
-  "הפקת הצעת מחיר (PDF)" button appear under the share button
-  (`_components/owner-quote.tsx`); customers never see it.
+- The "הפקת הצעת מחיר (PDF)" button sits under the share button for EVERYONE
+  (`_components/owner-quote.tsx`) — the owner quotes on the spot, with the
+  customer, so no detour to another page. The first tap on a device asks for the
+  `ADMIN_TOKEN` password inside the same dialog (same secret as
+  `/admin/orders`); the browser then keeps `ps_owner`, an HMAC of the token, for
+  half a year (rotating the token signs every device out). `/owner` still exists
+  for signing a device in or out. A customer who taps it gets a password field;
+  `/api/quotes` refuses anyone without the cookie.
 - The button opens a form for the customer's details (name required; phone,
   email, installation address, notes) and POSTs to `/api/quotes`, which
   **prices on the server with `lib/price-order.ts` — the same function
