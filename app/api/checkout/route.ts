@@ -1,26 +1,13 @@
 import { NextResponse, after } from "next/server";
-import { appendOrder, updateOrder, type Order, type OrderLine } from "@/lib/orders";
+import { appendOrder, updateOrder, type Order } from "@/lib/orders";
 import { growMakeConfig, createPaymentLink } from "@/lib/growMake";
 import { isValidIsraeliMobile, normalizeIsraeliPhone } from "@/lib/meshulam";
 import { notifyOwner } from "@/lib/notify";
 import { isPlausibleEmail, normalizeEmail, verifyCode } from "@/lib/emailVerification";
-import { resolveCatalogueSize, resolveDesignedSize } from "@/lib/sellable-size";
-import { priceConfiguration, type ChoiceSelection } from "@/app/_components/options";
-import { productTitle, heightOf } from "@/app/_components/sizes";
+import { priceOrder, type ShedRef } from "@/lib/price-order";
+import type { ChoiceSelection } from "@/app/_components/options";
 
 export const runtime = "nodejs";
-
-/**
- * WHICH SHED. A discriminated union rather than a bag of optional fields,
- * because "catalogue 2x2" and "the shed with this design code" are answered by
- * different price sources and confusing them is how one gets charged as the
- * other.
- */
-type ShedRef =
-  | { kind: "catalogue"; sizeLabel: string }
-  | { kind: "design"; designCode: string }
-  /** Legacy /?width=&length=&height= links, which carry no design code. */
-  | { kind: "footprint"; widthCm: number; depthCm: number; heightCm: number };
 
 type CheckoutPayload = {
   name?: string;
@@ -120,46 +107,15 @@ export async function POST(request: Request) {
   // materials price comes from CAD's bill of materials, the add-ons from
   // OPTION_GROUPS, and both are the same sources the page rendered from.
   const shed = body.shed;
-  if (!shed || typeof shed !== "object" || typeof shed.kind !== "string") {
-    return NextResponse.json({ ok: false, error: "missing_shed" }, { status: 400 });
-  }
-
-  const resolved =
-    shed.kind === "catalogue"
-      ? await resolveCatalogueSize(String(shed.sizeLabel ?? ""))
-      : shed.kind === "design"
-        ? await resolveDesignedSize({ designCode: String(shed.designCode ?? "") })
-        : shed.kind === "footprint"
-          ? await resolveDesignedSize({
-              widthCm: Number(shed.widthCm),
-              depthCm: Number(shed.depthCm),
-              heightCm: Number(shed.heightCm),
-            })
-          : null;
-
-  if (!resolved) {
-    return NextResponse.json({ ok: false, error: "bad_shed_kind" }, { status: 400 });
-  }
-  if (!resolved.ok) {
-    return NextResponse.json(
-      { ok: false, error: resolved.error, message: resolved.message },
-      { status: resolved.status },
-    );
-  }
-
-  const size = resolved.size;
   const choices = body.choices;
-  if (!choices || typeof choices !== "object" || Array.isArray(choices)) {
-    return NextResponse.json({ ok: false, error: "missing_choices" }, { status: 400 });
-  }
-
-  const priced = priceConfiguration(size, choices as ChoiceSelection);
+  const priced = await priceOrder(shed, choices);
   if (!priced.ok) {
     return NextResponse.json(
       { ok: false, error: priced.error, message: priced.message },
-      { status: 400 },
+      { status: priced.status },
     );
   }
+  const size = priced.size;
   const total = priced.total;
 
   // The page's own figure is checked, not used. A mismatch is either a stale tab
@@ -171,7 +127,7 @@ export async function POST(request: Request) {
   if (typeof claimed === "number" && Math.abs(claimed - total) > 0.5) {
     console.warn(
       `[checkout] price mismatch: page said ₪${claimed}, server computed ₪${total} ` +
-        `(shed ${shed.kind} ${size.label}, choices ${JSON.stringify(choices)})`,
+        `(shed ${shed?.kind} ${size.label}, choices ${JSON.stringify(choices)})`,
     );
     return NextResponse.json(
       {
@@ -187,20 +143,8 @@ export async function POST(request: Request) {
 
   // What was bought, written from what we priced — not from what was sent. The
   // order record is the thing we build against and argue from, so its lines are
-  // ours. A custom size carries its exact dimensions so the build is made to
-  // what the customer designed rather than to a rounded label.
-  const options: OrderLine[] = [
-    {
-      label: "גודל",
-      choice: size.custom
-        ? `${size.label} מטר (מידה מותאמת מהמתכנן: ${size.widthCm}×${size.depthCm}×${heightOf(size)} ס"מ)`
-        : `${size.label} מטר`,
-      price: size.price,
-    },
-    ...priced.lines
-      .filter((l) => l.price != null)
-      .map((l) => ({ label: "תוספת", choice: l.choiceLabel, price: l.price })),
-  ];
+  // ours (see lib/price-order.ts).
+  const options = priced.lines;
 
   const order: Order = {
     id: `order_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`,
@@ -209,10 +153,10 @@ export async function POST(request: Request) {
     phone: normalizeIsraeliPhone(phone),
     email,
     notes: (body.notes ?? "").trim(),
-    title: productTitle(size.label),
+    title: priced.title,
     totalIls: total,
     options,
-    designCode: resolved.designCode,
+    designCode: priced.designCode,
     paymentStatus: "pending",
     // Only ever true — an unverified address never reaches this point.
     emailVerified: email ? true : undefined,

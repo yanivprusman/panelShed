@@ -10,6 +10,7 @@ import { useSize } from "./size-context";
 import { heightOf } from "./sizes";
 import { sizeSummary } from "./planner";
 import { useConfiguredOrder, ils } from "./configured-order";
+import OwnerQuote from "./owner-quote";
 import { DesignDetails } from "./design-details";
 import { whatsappUrl } from "./contact";
 import { WhatsAppIcon, CheckIcon, LinkIcon } from "./icons";
@@ -180,7 +181,7 @@ export default function BuyPanel({
   // Price, effective selection and the order in words — shared with the
   // WhatsApp chooser so a message can never quote a total this card is not
   // showing. See ./configured-order.ts.
-  const { base, title, resolve, effSel, chosen, total: newTotal, configMessage } =
+  const { base, title, resolve, effSel, chosen, total: newTotal, configMessage, orderRef } =
     useConfiguredOrder();
 
   const [open, setOpen] = useState(false);
@@ -352,20 +353,7 @@ export default function BuyPanel({
       // A designed shed travels as its code — the whole shed, its dimensions
       // included. Only a legacy /?width=&length= visitor has no code, and then
       // the footprint is the only thing there is to name.
-      const shed = size.custom
-        ? designCode
-          ? { kind: "design" as const, designCode }
-          : {
-              kind: "footprint" as const,
-              widthCm: size.widthCm,
-              depthCm: size.depthCm,
-              heightCm: heightOf(size),
-            }
-        : { kind: "catalogue" as const, sizeLabel: size.label };
-
-      const choices = Object.fromEntries(
-        options.map((g, i) => [g.id, chosen[i]?.id ?? g.choices[0].id]),
-      );
+      const { shed, choices } = orderRef;
 
       const res = await fetch("/api/checkout", {
         method: "POST",
@@ -697,6 +685,8 @@ export default function BuyPanel({
           </div>
         )}
       </div>
+
+      <OwnerQuote />
 
       <p data-id="delivery-note" style={{ margin: "14px 0 0", fontSize: 13.5, color: "#777", lineHeight: 1.5 }}>
         {delivery}

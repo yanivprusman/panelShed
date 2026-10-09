@@ -2,7 +2,7 @@
 
 import { useCallback, useMemo } from "react";
 import { useSize } from "./size-context";
-import { productTitle } from "./sizes";
+import { productTitle, heightOf } from "./sizes";
 import { resolveChoicePrice } from "./options";
 import { sizeSummary, type OptionChoice as Choice } from "./planner";
 
@@ -23,7 +23,7 @@ import { sizeSummary, type OptionChoice as Choice } from "./planner";
 export const ils = (n: number) => `₪ ${n.toLocaleString("he-IL")}`;
 
 export function useConfiguredOrder() {
-  const { size, options, sel, shareUrl } = useSize();
+  const { size, options, sel, shareUrl, designCode } = useSize();
 
   const base = size.price;
   const title = productTitle(size.label);
@@ -111,7 +111,30 @@ export function useConfiguredOrder() {
     [title, configLines],
   );
 
+  /**
+   * The order as the server prices it: WHICH shed and WHICH choice per group,
+   * by id — never a price. Checkout and the owner's quote both send exactly
+   * this, so they cannot disagree about what was configured.
+   */
+  const orderRef = useMemo(() => {
+    const shed = size.custom
+      ? designCode
+        ? { kind: "design" as const, designCode }
+        : {
+            kind: "footprint" as const,
+            widthCm: size.widthCm,
+            depthCm: size.depthCm,
+            heightCm: heightOf(size),
+          }
+      : { kind: "catalogue" as const, sizeLabel: size.label };
+    const choices = Object.fromEntries(
+      options.map((g, i) => [g.id, chosen[i]?.id ?? g.choices[0].id]),
+    );
+    return { shed, choices };
+  }, [size, designCode, options, chosen]);
+
   return {
+    orderRef,
     size,
     title,
     base,

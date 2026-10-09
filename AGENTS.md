@@ -188,3 +188,26 @@ version prefix makes a mismatch ignore the whole `cfg` rather than half-apply it
 All configurator state (selected shed, add-on choices, planner URL) lives in
 `SizeProvider` — `BuyPanel`, `ProductDims` and `Product3D` all read it from
 there, so they cannot disagree.
+
+# Owner price quotes (PDF) — 2026-10-09
+
+The owner can turn the configuration on screen into a numbered PDF quote.
+
+- **Sign in once per device at `/owner`** with the `ADMIN_TOKEN` password (the
+  same secret as `/admin/orders`). The browser keeps `ps_owner`, an HMAC of the
+  token (rotating the token signs every device out). Only then does the
+  "הפקת הצעת מחיר (PDF)" button appear under the share button
+  (`_components/owner-quote.tsx`); customers never see it.
+- The button opens a form for the customer's details (name required; phone,
+  email, installation address, notes) and POSTs to `/api/quotes`, which
+  **prices on the server with `lib/price-order.ts` — the same function
+  `/api/checkout` charges with** — refuses a stale tab's total, stores the quote
+  FROZEN in `data/quotes.json` (`2026-001`, sequential per year, valid 14 days),
+  and returns the PDF. On a phone it goes to the share sheet; otherwise it
+  downloads. No link, no WhatsApp automation.
+- PDF = `lib/quote-pdf.ts`: HTML → headless Chrome `--print-to-pdf` under
+  `systemd-run --scope`, throwaway profile. Weights capped at 700 (only Noto
+  Sans Hebrew Regular/Bold exist; heavier falls back to a serif with old-style
+  numerals). VAT (18%) is split out of the VAT-inclusive total.
+- Quotes from the **dev** shop are priced by cad-dev; the ones you send should
+  come from the shop whose CAD prices you stand behind.
