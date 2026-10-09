@@ -17,6 +17,14 @@ export const SLOGAN = "מכירה והתקנת מחסנים מפאנל מבוד�
 export const LEGAL_NAME = "ג.ח. פרוייקטים";
 export const BUSINESS_ID = "036211126"; // עוסק מורשה
 
+/** Where a customer pays by bank transfer. Printed on every price quote PDF. */
+export const BANK_TRANSFER = {
+  bank: "11 דיסקונט",
+  branch: "321 הלאום",
+  account: "125196891",
+  holder: "יניב פרוסמן ו/או ג.ח. פרוייקטים",
+};
+
 export const PHONE_DISPLAY = "055-667-7260";
 const PHONE_E164 = "972556677260";
 export const TEL_URL = `tel:+${PHONE_E164}`;

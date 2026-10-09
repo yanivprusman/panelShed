@@ -6,6 +6,7 @@ import os from "os";
 import path from "path";
 import type { Quote } from "@/lib/quotes";
 import {
+  BANK_TRANSFER,
   BUSINESS_ID,
   EMAIL,
   LEGAL_NAME,
@@ -103,6 +104,11 @@ export function quoteHtml(q: Quote): string {
   .totals td { border: none; padding: 3px 4px; }
   .totals .grand td { border-top: 2px solid #2a2a2a; padding-top: 8px; font-size: 14pt; font-weight: 700; }
   .notes { margin-top: 20px; padding: 10px 14px; border: 1px solid #e3e3e3; border-radius: 6px; white-space: pre-wrap; }
+  .bank { margin-top: 20px; padding: 10px 14px; background: #f5f8fb; border-radius: 6px; font-size: 10.5pt; }
+  .bank h2 { margin: 0 0 6px; font-size: 11pt; font-weight: 700; }
+  .bank table { width: auto; margin: 0; }
+  .bank td { border: none; padding: 1px 0 1px 18px; }
+  .bank td.k { color: #666; }
   .terms { margin-top: 22px; font-size: 9.5pt; color: #555; }
   .terms li { margin-bottom: 3px; }
   footer { margin-top: 28px; padding-top: 10px; border-top: 1px solid #ddd; font-size: 9pt; color: #777; text-align: center; }
@@ -142,6 +148,16 @@ ${rows}
   </table>
 
   ${q.notes ? `<div class="notes">${esc(q.notes)}</div>` : ""}
+
+  <section class="bank">
+    <h2>פרטים להעברה בנקאית</h2>
+    <table>
+      <tr><td class="k">בנק</td><td>${esc(BANK_TRANSFER.bank)}</td></tr>
+      <tr><td class="k">סניף</td><td>${esc(BANK_TRANSFER.branch)}</td></tr>
+      <tr><td class="k">מספר חשבון</td><td>${esc(BANK_TRANSFER.account)}</td></tr>
+      <tr><td class="k">שם המוטב</td><td>${esc(BANK_TRANSFER.holder)}</td></tr>
+    </table>
+  </section>
 
   <ul class="terms">
     <li>המחירים כוללים מע"מ.</li>
