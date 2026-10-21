@@ -11,8 +11,6 @@ import {
 } from "react";
 import type { PricedShedSize } from "./sizes";
 import {
-  CONFIG_PARAM,
-  decodeConfig,
   plannerUrl as buildPlannerUrl,
   plannerEmbedUrl,
   shopConfigUrl,
@@ -37,7 +35,7 @@ import {
  * Both legs of that planner trip also carry `cfg`, the whole configurator state
  * (see ./planner.ts), so add-on selections survive the detour.
  */
-type CustomStatus =
+export type CustomStatus =
   | { state: "none" }
   | { state: "loading" }
   /** Set when the shed is outside the range we routinely sell. It is priced and
@@ -75,22 +73,39 @@ type SizeCtx = {
 
 const Ctx = createContext<SizeCtx | null>(null);
 
+/** The state the page's address asks for, resolved on the server before the
+ *  first paint (lib/deep-link.ts) — so the first thing on screen is the shed the
+ *  link names, never the standard one standing in for it while a client fetch
+ *  catches up. */
+export type InitialSizeState = {
+  standardIndex: number;
+  mode: SizeMode;
+  sel: number[];
+  custom: PricedShedSize | null;
+  designCode: string | null;
+  customStatus: CustomStatus;
+};
+
 export function SizeProvider({
   sizes: catalogue,
   options,
+  initial,
   children,
 }: {
   sizes: PricedShedSize[];
   options: OptionGroup[];
+  initial: InitialSizeState;
   children: ReactNode;
 }) {
-  const [standardIndex, setStandardIndex] = useState(0);
-  const [mode, setMode] = useState<SizeMode>("standard");
-  const [custom, setCustom] = useState<PricedShedSize | null>(null);
-  const [customStatus, setCustomStatus] = useState<CustomStatus>({ state: "none" });
-  const [sel, setSel] = useState<number[]>(() => options.map(() => 0));
+  // Everything the address asked for arrives already resolved; none of it
+  // changes after load except by the visitor's own hand (mode, add-ons).
+  const standardIndex = initial.standardIndex;
+  const custom = initial.custom;
+  const customStatus = initial.customStatus;
+  const [mode, setMode] = useState<SizeMode>(initial.mode);
+  const [sel, setSel] = useState<number[]>(initial.sel);
   // The designed shed we are showing and pricing, when there is one.
-  const [designCode, setDesignCode] = useState<string | null>(null);
+  const designCode = initial.designCode;
   // Which copy of this shop the visitor is reading — sent to the planner so it
   // returns him HERE and not to the one registered production address. Read
   // after mount like every other browser-only fact below, so the server and the
@@ -101,94 +116,13 @@ export function SizeProvider({
     setSel((prev) => prev.map((v, i) => (i === groupIdx ? choiceIdx : v)));
   }, []);
 
-  // Deep-link support, applied after mount to avoid an SSR/CSR hydration
-  // mismatch (Googlebot renders JS, so it still sees the final price):
-  //
-  //   /?size=<label>            — a catalogue SKU, from the Merchant feed or a
-  //                               Shopping ad.
-  //   /?design=<code>           — the shed designed in the CAD planner, coming
-  //                               back here to be bought. Priced live.
-  //   /?width=&length=&height=  — a bare footprint with no shed behind it. Only
-  //                               hand-made links arrive this way now; the
-  //                               planner always sends its code instead.
-  //   /?cfg=…                   — the configuration this visitor left with,
-  //                               echoed back by the planner. Restored on all
-  //                               of the above (see ./planner.ts).
-  //
-  // A design wins over size when both are present: the visitor just designed
-  // that shed, so it's the more specific intent.
+  // The address this page is being read at is a browser-only fact — the server
+  // cannot know it — so it alone is read after mount. Everything else in the
+  // query was resolved on the server (see InitialSizeState).
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-
-    // Browser-only facts, all read here on purpose: the server cannot know the
-    // address this page is being read at any more than it can know the query.
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setShopOrigin(window.location.origin);
-
-    // Everything the customer had configured before the planner detour.
-    const config = decodeConfig(options, params.get(CONFIG_PARAM));
-    if (config) {
-      setSel(config.sel);
-    }
-
-    // The catalogue SKU: an explicit ?size= wins, otherwise the one carried
-    // through the round trip, so returning from the planner and switching back
-    // to "standard" lands on the shed they started from.
-    const label = params.get("size") ?? config?.sizeLabel;
-    if (label) {
-      const i = catalogue.findIndex((s) => s.label === label);
-      if (i >= 0) setStandardIndex(i);
-    }
-
-    // A design code is the whole shed, its dimensions included; width/length is
-    // only a footprint. The code wins outright when both are present — it is the
-    // single source, and re-deriving the size from numbers sitting beside it is
-    // how the two end up disagreeing.
-    const design = params.get("design");
-    const width = params.get("width");
-    const length = params.get("length");
-    if (!design && (!width || !length)) return;
-
-    const query = new URLSearchParams();
-    if (design) {
-      query.set("design", design);
-    } else {
-      query.set("width", width!);
-      query.set("length", length!);
-      const height = params.get("height");
-      if (height) query.set("height", height);
-    }
-
-    let cancelled = false;
-    // Kicking off external work on mount — and the visitor must see that we're
-    // pricing their design rather than a stale standard shed for the second or
-    // two the CAD quote takes.
-    setCustomStatus({ state: "loading" });
-    setMode("custom");
-    fetch(`/api/custom-quote?${query.toString()}`)
-      .then(async (res) => {
-        const data = await res.json();
-        if (cancelled) return;
-        if (data.ok) {
-          setCustom(data.size);
-          setDesignCode(data.designCode ?? null);
-          setCustomStatus({ state: "ready", nonStandardSize: data.nonStandardSize });
-        } else {
-          setCustomStatus({ state: "error", message: data.message });
-        }
-      })
-      .catch(() => {
-        if (cancelled) return;
-        setCustomStatus({
-          state: "error",
-          message:
-            "לא הצלחנו לתמחר את המידות האלה כרגע. נסו שוב עוד רגע או דברו איתנו בוואטסאפ.",
-        });
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [catalogue, options]);
+  }, []);
 
   const standard = catalogue[standardIndex] ?? catalogue[0];
   // The shed on offer right now, as ONE identity: the visitor's design when

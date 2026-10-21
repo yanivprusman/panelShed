@@ -11,6 +11,7 @@ import { SITE_URL, SITE_NAME } from "@/lib/site";
 import { SIZES } from "./_components/sizes";
 import { OPTION_GROUPS } from "./_components/options";
 import { getPricedSizes } from "@/lib/cad-quote";
+import { resolveDeepLink } from "@/lib/deep-link";
 import { BRAND, PHONE_DISPLAY, EMAIL } from "./_components/contact";
 import FaqSection, { FAQ_ITEMS } from "./_components/faq";
 import { FloatingWhatsApp } from "./_components/whatsapp-cta";
@@ -99,9 +100,15 @@ const product = {
 
 const ACCENT = "#2f8fd6";
 
-export default async function Home() {
+export default async function Home({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
   // Materials prices quoted live from the CAD app (see lib/cad-quote.ts).
   const sizes = await getPricedSizes();
+  // The shed and add-ons the address names, priced before the first paint.
+  const initial = await resolveDeepLink(await searchParams, sizes, OPTION_GROUPS);
   const jsonLd = buildJsonLd(Math.min(...sizes.map((s) => s.price)));
   return (
     <div
@@ -124,7 +131,7 @@ export default async function Home() {
           WhatsApp buttons up there and down there now offer to send the shed
           currently on screen, which is a fact only SizeProvider holds. Neither
           provider renders an element, so nothing about the layout moves. */}
-      <SizeProvider sizes={sizes} options={OPTION_GROUPS}>
+      <SizeProvider sizes={sizes} options={OPTION_GROUPS} initial={initial}>
       <WhatsAppChooserProvider>
       <div data-id="page-container" style={{ maxWidth: 1180, margin: "0 auto" }}>
         <SiteHeader />
