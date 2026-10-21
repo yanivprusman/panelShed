@@ -7,11 +7,10 @@ import ProductDims from "./_components/product-dims";
 import SiteHeader from "./_components/site-header";
 import SiteFooter from "./_components/site-footer";
 import { SizeProvider } from "./_components/size-context";
-import { SITE_URL, SITE_NAME } from "@/lib/site";
-import { SIZES } from "./_components/sizes";
+import { SITE_URL, SITE_NAME, OPEN_GRAPH_BASE } from "@/lib/site";
+import { SIZES, productTitle } from "./_components/sizes";
 import { OPTION_GROUPS } from "./_components/options";
-import { getPricedSizes } from "@/lib/cad-quote";
-import { resolveDeepLink } from "@/lib/deep-link";
+import { resolvePage, describeShed } from "@/lib/deep-link";
 import { BRAND, PHONE_DISPLAY, EMAIL } from "./_components/contact";
 import FaqSection, { FAQ_ITEMS } from "./_components/faq";
 import { FloatingWhatsApp } from "./_components/whatsapp-cta";
@@ -28,12 +27,35 @@ const assistant = Assistant({
   display: "swap",
 });
 
-export const metadata: Metadata = {
-  title: "מחסן גינה פאנל מבודד 2x2 מטר | פאנל-שד",
-  description:
-    "מחסן גינה מפאנל מבודד בעובי 5 ס\"מ — חסין לפגעי מזג אוויר, בידוד וגימור ברמה גבוהה, מיוצר בארץ.",
-  alternates: { canonical: "/" },
+const PAGE_DESCRIPTION =
+  'מחסן גינה מפאנל מבודד בעובי 5 ס"מ — חסין לפגעי מזג אוויר, בידוד וגימור ברמה גבוהה, מיוצר בארץ.';
+
+type PageProps = {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 };
+
+// The title and share preview name the shed the link is about — a shared link
+// to a designed 1x2 used to preview, and open in a tab titled, "2x2".
+// Canonical stays "/": every one of these links is the same product page.
+export async function generateMetadata({ searchParams }: PageProps): Promise<Metadata> {
+  const { sizes, initial } = await resolvePage(await searchParams);
+  const { size, designed, summary, addOns } = describeShed(sizes, initial);
+  const title = designed
+    ? `${productTitle(size.label)} — לפי התכנון שלך`
+    : productTitle(size.label);
+  const description = designed
+    ? [summary, ...addOns].join(" · ")
+    : PAGE_DESCRIPTION;
+  return {
+    // Absolute, spelled out: the layout's "%s | name" template did not reach a
+    // title returned from generateMetadata here (measured — it rendered bare).
+    title: { absolute: `${title} | ${SITE_NAME}` },
+    description,
+    alternates: { canonical: "/" },
+    openGraph: { ...OPEN_GRAPH_BASE, url: SITE_URL, title, description },
+    twitter: { card: "summary_large_image", title, description },
+  };
+}
 
 // Structured data (schema.org) so Google can show rich results: the shed as a
 // Product with an aggregate offer (cheapest size upward), plus the business.
@@ -100,15 +122,10 @@ const product = {
 
 const ACCENT = "#2f8fd6";
 
-export default async function Home({
-  searchParams,
-}: {
-  searchParams: Promise<Record<string, string | string[] | undefined>>;
-}) {
-  // Materials prices quoted live from the CAD app (see lib/cad-quote.ts).
-  const sizes = await getPricedSizes();
-  // The shed and add-ons the address names, priced before the first paint.
-  const initial = await resolveDeepLink(await searchParams, sizes, OPTION_GROUPS);
+export default async function Home({ searchParams }: PageProps) {
+  // Materials prices quoted live from the CAD app (see lib/cad-quote.ts), and
+  // the shed and add-ons the address names, priced before the first paint.
+  const { sizes, initial } = await resolvePage(await searchParams);
   const jsonLd = buildJsonLd(Math.min(...sizes.map((s) => s.price)));
   return (
     <div

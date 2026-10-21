@@ -3,7 +3,7 @@ import Script from "next/script";
 import "./globals.css";
 import FeedbackChatClient from "./feedback-chat-client";
 import GoogleAdsTag from "./_components/google-ads-tag";
-import { SITE_URL, SITE_NAME, SITE_DESCRIPTION } from "@/lib/site";
+import { SITE_URL, SITE_NAME, SITE_DESCRIPTION, OPEN_GRAPH_BASE } from "@/lib/site";
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
@@ -25,20 +25,10 @@ export const metadata: Metadata = {
     "פאנל שד",
   ],
   openGraph: {
-    type: "website",
-    locale: "he_IL",
-    siteName: SITE_NAME,
+    ...OPEN_GRAPH_BASE,
     url: SITE_URL,
     title: `מחסן גינה פאנל מבודד — ${SITE_NAME}`,
     description: SITE_DESCRIPTION,
-    images: [
-      {
-        url: "/products/real-installation.jpg",
-        width: 2000,
-        height: 1500,
-        alt: "מחסן גינה פאנל מבודד",
-      },
-    ],
   },
   twitter: {
     card: "summary_large_image",

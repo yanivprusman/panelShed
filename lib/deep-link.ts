@@ -1,8 +1,11 @@
 import "server-only";
+import { cache } from "react";
 import { STANDARD_HEIGHT_CM, type PricedShedSize } from "@/app/_components/sizes";
-import { CONFIG_PARAM, decodeConfig, type OptionGroup } from "@/app/_components/planner";
+import { CONFIG_PARAM, decodeConfig, sizeSummary, type OptionGroup } from "@/app/_components/planner";
 import type { InitialSizeState } from "@/app/_components/size-context";
 import { resolveDesignedSize } from "@/lib/sellable-size";
+import { getPricedSizes } from "@/lib/cad-quote";
+import { OPTION_GROUPS } from "@/app/_components/options";
 
 /**
  * What the page's own address asks for, resolved BEFORE the first byte is sent.
@@ -92,4 +95,47 @@ export async function resolveDeepLink(
       },
     };
   }
+}
+
+type PageParams = Record<string, string | string[] | undefined>;
+
+/** One resolution per request, shared by the page and its metadata. Keyed by
+ *  the query as a string, because React's cache compares arguments by identity
+ *  and the two callers each get their own searchParams object. */
+const resolvePageByQuery = cache(async (query: string) => {
+  const sizes = await getPricedSizes();
+  const params = Object.fromEntries(new URLSearchParams(query));
+  return { sizes, initial: await resolveDeepLink(params, sizes, OPTION_GROUPS) };
+});
+
+export function resolvePage(params: PageParams) {
+  const q = new URLSearchParams();
+  for (const [k, v] of Object.entries(params)) {
+    const first = Array.isArray(v) ? v[0] : v;
+    if (first !== undefined) q.set(k, first);
+  }
+  q.sort();
+  return resolvePageByQuery(q.toString());
+}
+
+/**
+ * What a link to this page is ABOUT, in words — the tab title and the preview
+ * WhatsApp draws for a shared link. Same shed as the page shows: the designed
+ * one when the link names a design that priced, otherwise the catalogue shed.
+ * A link whose whole point is "here is the 1x2 I drew" must not be previewed
+ * as "2x2".
+ */
+export function describeShed(
+  sizes: PricedShedSize[],
+  initial: InitialSizeState,
+): { size: PricedShedSize; designed: boolean; summary: string; addOns: string[] } {
+  const designed = initial.mode === "custom" && initial.custom !== null;
+  const size = designed ? initial.custom! : (sizes[initial.standardIndex] ?? sizes[0]);
+  // Only the add-ons actually chosen — the first choice of every group is its
+  // "none"/included default, and listing those would say nothing.
+  const addOns = OPTION_GROUPS.flatMap((g, i) => {
+    const idx = initial.sel[i] ?? 0;
+    return idx > 0 && g.choices[idx] ? [g.choices[idx].label] : [];
+  });
+  return { size, designed, summary: sizeSummary(size), addOns };
 }
